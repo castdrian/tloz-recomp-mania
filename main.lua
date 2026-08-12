@@ -137,9 +137,13 @@ return function(mod)
 
   local function removeNpc(state, npc)
     npc.tlozDefeated = true
-    npc.def.hidden = true
+    npc.tlozGlowFrames = 10
     npc.frozen = true
     spawnParticles(state, npc)
+  end
+
+  local function purgeNpc(state, npc)
+    npc.def.hidden = true
     for index = #state.npcs, 1, -1 do
       if state.npcs[index] == npc then table.remove(state.npcs, index) end
     end
@@ -215,11 +219,16 @@ return function(mod)
   end
 
   local function updateNpcGlow(state)
+    local defeated = {}
     for _, npc in ipairs(state.npcs or {}) do
       if npc.tlozGlowFrames and npc.tlozGlowFrames > 0 then
         npc.tlozGlowFrames = npc.tlozGlowFrames - 1
+        if npc.tlozDefeated and npc.tlozGlowFrames == 0 then
+          defeated[#defeated + 1] = npc
+        end
       end
     end
+    for _, npc in ipairs(defeated) do purgeNpc(state, npc) end
   end
 
   local function drawParticles(state)
