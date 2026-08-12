@@ -6,7 +6,7 @@ local Runtime = require("src.mods.Runtime")
 local Sound = require("src.core.Sound")
 local SpriteRenderer = require("src.render.SpriteRenderer")
 
-local isGen2 = GameVersion.isGold and GameVersion.isGold() or false
+local isGen2 = GameVersion.generation and GameVersion.generation() == 2 or false
 
 local function loadModule(mod, name)
   local source = assert(mod:read(name), name .. " is missing")
@@ -324,7 +324,7 @@ return function(mod)
         if isGen2 then
           local input = game.input
           local player = state.player
-          local busy = state.busy and state:busy()
+          local busy = game.world and game.world.busy and game.world:busy()
           if input and player and not busy and not player.inputLocked
              and not player.moving and not player.tlozAction then
             if input.tlozPressedSelect then
@@ -410,7 +410,7 @@ return function(mod)
       Input.step = function(input, ...)
         inputStep(input, ...)
         input.tlozPressedSelect = input:wasPressed("select")
-        if input.tlozPressedSelect then input.pressed.select = nil end
+        if isGen2 and input.tlozPressedSelect then input.pressed.select = nil end
       end
     end
   end
