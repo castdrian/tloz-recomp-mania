@@ -6,6 +6,7 @@
   "entry": "main.lua",
   "profile": "overhaul",
   "category": "GAMEPLAY",
+  "games": ["gen1", "gen2"],
   "supported_generations": [1, 2],
   "game_version": ">=0.0.0-0 <2.0.0",
   "priority": 100,

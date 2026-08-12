@@ -1,23 +1,25 @@
-local function requireEngine(names)
-  for _, name in ipairs(names) do
-    local ok, module = pcall(require, name)
-    if ok then return module end
-  end
-  error("TLoZ: Recomp Mania could not find a compatible engine module")
-end
+local Game = require("src.core.Game")
+local GameVersion = require("src.core.GameVersion")
+local Input = require("src.core.Input")
+local NPC = require("src.world.NPC")
+local Runtime = require("src.mods.Runtime")
+local Sound = require("src.core.Sound")
+local SpriteRenderer = require("src.render.SpriteRenderer")
 
-local NPC = requireEngine({ "src.world.NPC", "src.gen2.world.NPC" })
-local Player = requireEngine({ "src.world.Player", "src.gen2.world.Player" })
-local Runtime = requireEngine({ "src.mods.Runtime", "src.gen2.mods.Runtime" })
-local Sound = requireEngine({ "src.core.Sound", "src.gen2.core.Sound" })
-local SpriteRenderer = requireEngine({
-  "src.render.SpriteRenderer", "src.gen2.render.SpriteRenderer",
-})
+local isGen2 = GameVersion.isGold and GameVersion.isGold() or false
 
 local function loadModule(mod, name)
   local source = assert(mod:read(name), name .. " is missing")
   local chunk = assert(load(source, "@" .. mod.path .. "/" .. name))
   return chunk()
+end
+
+local function readOptionalMember(object, name)
+  return object[name]
+end
+
+local function writeMember(object, name, value)
+  object[name] = value
 end
 
 return function(mod)
@@ -76,8 +78,7 @@ return function(mod)
   end
 
   local function play(name)
-    local game = requireEngine({ "src.core.Game", "src.gen2.core.Game" })
-    if game.data then Sound.play(game.data, name) end
+    if Game.data then Sound.play(Game.data, name) end
   end
 
   local spriteCache = {}
@@ -234,8 +235,7 @@ return function(mod)
     if action.kind == "shield" then
       action.frame = 1 + math.floor(action.timer / 6) % 2
       action.timer = action.timer + 1
-      local game = requireEngine({ "src.core.Game", "src.gen2.core.Game" })
-      if not game.input:isDown("a") then state.player.tlozAction = nil end
+      if not Game.input:isDown("a") then state.player.tlozAction = nil end
       return
     end
     action.timer = action.timer + 1
@@ -261,103 +261,157 @@ return function(mod)
     for _, npc in ipairs(defeated) do purgeNpc(state, npc) end
   end
 
-  local function drawParticles(state)
+  local function drawParticles(state, scale)
     if not love.graphics or not state.tlozParticles then return end
+    scale = scale or 1
     local camera = state.camera
     for _, particle in ipairs(state.tlozParticles) do
       local alpha = math.min(1, particle.life / 8)
       love.graphics.setColor(1, 0.05, 0.05, alpha)
-      love.graphics.rectangle("fill", math.floor(particle.x - camera.x),
-        math.floor(particle.y - camera.y), particle.size, particle.size)
+      love.graphics.rectangle("fill",
+        math.floor((particle.x - camera.x) * scale),
+        math.floor((particle.y - camera.y) * scale),
+        particle.size * scale, particle.size * scale)
     end
     love.graphics.setColor(1, 1, 1, 1)
   end
 
+  local function setLinkSprites(player)
+    local link = sprite("link-walk.png", 6, true, "tloz-link")
+    player.sprite = link
+    player.surfSprite = link
+    player.surfPikachuSprite = link
+    player.bikeSprite = link
+  end
+
+  local function applyPlayerVisual(player)
+    if not player then return end
+    local action = player.tlozAction
+    if action then
+      player.sprite = actionSprite(action.kind, action.combo,
+        player.facing, action.frame)
+      return
+    end
+    setLinkSprites(player)
+  end
+
   local function install(game)
-    local OverworldState = requireEngine({
-      "src.world.OverworldController", "src.gen2.world.OverworldController",
-    })
-    if not Player.tlozRecompMania then
-    Player.tlozRecompMania = true
-    local playerNew = Player.new
-    local playerPose = Player.pose
-    Player.new = function(data, x, y, facing)
-      local player = playerNew(data, x, y, facing)
-      local link = sprite("link-walk.png", 6, true, "tloz-link")
-      player.sprite = link
-      player.surfSprite = link
-      player.surfPikachuSprite = link
-      player.bikeSprite = link
-      return player
-    end
-    Player.pose = function(player, ...)
-      local current, px, py, facing, phase, flip, hopping = playerPose(player, ...)
-      local action = player.tlozAction
-      if not action then return current, px, py, facing, phase, flip, hopping end
-      return actionSprite(action.kind, action.combo, facing, action.frame),
-        px, py, facing, 0, false, hopping
-    end
-    end
+    local OverworldState = require("src.world.OverworldController")
 
     if not NPC.tlozRecompMania then
-    NPC.tlozRecompMania = true
-    local npcDraw = NPC.draw
-    NPC.draw = function(npc, ...)
-      if npc.tlozGlowFrames and npc.tlozGlowFrames > 0 and love.graphics then
-        local r, g, b, a = love.graphics.getColor()
-        love.graphics.setColor(1, 0.08, 0.08, a)
-        npcDraw(npc, ...)
-        love.graphics.setColor(r, g, b, a)
-        return
+      NPC.tlozRecompMania = true
+      local npcDraw = NPC.draw
+      NPC.draw = function(npc, ...)
+        if npc.tlozGlowFrames and npc.tlozGlowFrames > 0 and love.graphics then
+          local r, g, b, a = love.graphics.getColor()
+          love.graphics.setColor(1, 0.08, 0.08, a)
+          npcDraw(npc, ...)
+          love.graphics.setColor(r, g, b, a)
+          return
+        end
+        return npcDraw(npc, ...)
       end
-      return npcDraw(npc, ...)
-    end
     end
 
     if not OverworldState.tlozRecompMania then
-    OverworldState.tlozRecompMania = true
-    local update = OverworldState.update
-    local handleInput = OverworldState.handleInput
-    local drawWorld = OverworldState.drawWorld
-    OverworldState.update = function(state, dt)
-      state.tlozParticles = state.tlozParticles or {}
-      state.tlozCombat = state.tlozCombat or Combat.new()
-      updateParticles(state)
-      updateNpcGlow(state)
-      updateAction(state)
-      return update(state, dt)
-    end
-    OverworldState.handleInput = function(state)
-      local input = game.input
-      local player = state.player
-      if not input or not player or player.inputLocked then
-        return handleInput(state)
-      end
-      if player.tlozAction then return end
-      if player.moving then return handleInput(state) end
-      if input:wasPressed("select") then
-        selectEquipment(state)
-        return
-      end
-      if input:wasPressed("b") and not player.onBike and not player.surfing
-         and not player.fishing then
-        startSword(state)
-        return
-      end
-      if input:isDown("a") and not hasInteractionTarget(state)
-         and not player.onBike and not player.surfing and not player.fishing then
+      OverworldState.tlozRecompMania = true
+      local update = OverworldState.update
+      OverworldState.update = function(state, dt)
+        state.tlozParticles = state.tlozParticles or {}
         state.tlozCombat = state.tlozCombat or Combat.new()
-        local equipment = Combat.currentEquipment(state.tlozCombat)
-        startEquipment(state, equipment)
-        return
+        updateParticles(state)
+        updateNpcGlow(state)
+        if isGen2 then
+          local input = game.input
+          local player = state.player
+          local busy = state.busy and state:busy()
+          if input and player and not busy and not player.inputLocked
+             and not player.moving and not player.tlozAction then
+            if input.tlozPressedSelect then
+              selectEquipment(state)
+            elseif input:wasPressed("b") and not player.onBike
+               and not player.surfing and not player.fishing then
+              startSword(state)
+            elseif input:isDown("a") and not hasInteractionTarget(state)
+               and not player.onBike and not player.surfing
+               and not player.fishing then
+              local equipment = Combat.currentEquipment(state.tlozCombat)
+              startEquipment(state, equipment)
+            end
+          end
+        end
+        updateAction(state)
+        applyPlayerVisual(state.player)
+        return update(state, dt)
       end
-      return handleInput(state)
+
+      if not isGen2 then
+        local handleInput = OverworldState.handleInput
+        local drawWorld = readOptionalMember(OverworldState, "drawWorld")
+        OverworldState.handleInput = function(state)
+          local input = game.input
+          local player = state.player
+          if not input or not player or player.inputLocked then
+            return handleInput(state)
+          end
+          if player.tlozAction then return end
+          if player.moving then return handleInput(state) end
+          if input.tlozPressedSelect or input:wasPressed("select") then
+            selectEquipment(state)
+            return
+          end
+          if input:wasPressed("b") and not player.onBike and not player.surfing
+             and not player.fishing then
+            startSword(state)
+            return
+          end
+          if input:isDown("a") and not hasInteractionTarget(state)
+             and not player.onBike and not player.surfing
+             and not player.fishing then
+            local equipment = Combat.currentEquipment(state.tlozCombat)
+            startEquipment(state, equipment)
+            return
+          end
+          return handleInput(state)
+        end
+        writeMember(OverworldState, "drawWorld", function(state, ...)
+          local result = drawWorld(state, ...)
+          drawParticles(state)
+          return result
+        end)
+      end
     end
-    OverworldState.drawWorld = function(state, ...)
-      local result = drawWorld(state, ...)
-      drawParticles(state)
-      return result
+
+    if isGen2 then
+      local Gen2World = require("src.world.gen2.World")
+      if not Gen2World.tlozRecompMania then
+        Gen2World.tlozRecompMania = true
+        local pollInput = Gen2World.pollInput
+        Gen2World.pollInput = function(state, input)
+          if state.player and state.player.tlozAction then
+            state.heldDir = nil
+            return
+          end
+          return pollInput(state, input)
+        end
+        local draw = Gen2World.draw
+        Gen2World.draw = function(state, ...)
+          local result = draw(state, ...)
+          local scale = state.zoomScale and state:zoomScale() or 1
+          drawParticles(state, scale)
+          return result
+        end
+      end
     end
+
+    if not Input.tlozRecompMania then
+      Input.tlozRecompMania = true
+      local inputStep = Input.step
+      Input.step = function(input, ...)
+        inputStep(input, ...)
+        input.tlozPressedSelect = input:wasPressed("select")
+        if input.tlozPressedSelect then input.pressed.select = nil end
+      end
     end
   end
 
