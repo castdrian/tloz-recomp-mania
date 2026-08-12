@@ -81,6 +81,19 @@ return function(mod)
     if Game.data then Sound.play(Game.data, name) end
   end
 
+  local function currentPlayer()
+    local world = Game.world or Game.overworld
+    return world and world.player
+  end
+
+  local function playerTarget(payload)
+    local target = payload and payload.target
+    local side = payload and payload.side
+    return (target and target.isPlayer)
+      or side == "player"
+      or (type(side) == "table" and side.key == "player")
+  end
+
   local spriteCache = {}
   local function sprite(name, frames, walker, seed)
     local key = table.concat({ name, frames, walker and "walker" or "fixed", seed or "" }, "|")
@@ -99,6 +112,10 @@ return function(mod)
     local name
     if kind == "sword" then
       name = string.format("sword_%d_%s_%d.png", combo, facing, frame)
+    elseif kind == "sword_charge" then
+      name = string.format("sword_1_%s_%d.png", facing, frame)
+    elseif kind == "sword_spin" then
+      name = string.format("sword_4_%s_%d.png", facing, frame)
     elseif kind == "tool" and combo ~= "shield" then
       name = string.format("tool_%s_%s_%d.png", combo, facing, frame)
     else
@@ -172,7 +189,7 @@ return function(mod)
     if not npc then return end
     local result = Combat.registerHit(state.tlozCombat, npc.id)
     npc.tlozGlowFrames = 10
-    play("TLOZ_SWORD_TAP")
+    play(action.hitAudio or "TLOZ_SWORD_TAP")
     if result.defeated then
       play("TLOZ_VILLAGER_DEATH")
       removeNpc(state, npc)
@@ -191,8 +208,34 @@ return function(mod)
       frame = 1,
       timer = 0,
       hit = false,
+      hitAudio = "TLOZ_SWORD_TAP",
     }
     play("TLOZ_SWORD_" .. tostring(combo))
+  end
+
+  local function startSwordCharge(state)
+    state.player.tlozAction = {
+      kind = "sword_charge",
+      combo = 4,
+      frame = 1,
+      timer = 0,
+      hit = false,
+      hitAudio = "TLOZ_SWORD_TAP",
+    }
+    play("TLOZ_SWORD_CHARGE")
+  end
+
+  local function startSwordSpin(state, magic)
+    state.player.tlozAction = {
+      kind = "sword_spin",
+      combo = 4,
+      frame = 1,
+      timer = 0,
+      hit = false,
+      hitAudio = "TLOZ_SWORD_TAP",
+    }
+    play(magic and "TLOZ_SWORD_SPIN_MAGIC" or "TLOZ_SWORD_SPIN")
+    if magic then play("TLOZ_SWORD_MAGIC") end
   end
 
   local function startShield(state)
@@ -207,7 +250,7 @@ return function(mod)
       return
     end
     state.player.tlozAction = { kind = "tool", combo = equipment.id, frame = 1,
-      timer = 0, hit = false }
+      timer = 0, hit = false, hitAudio = equipment.hitAudio }
     play(equipment.audio)
   end
 
@@ -238,6 +281,14 @@ return function(mod)
       if not Game.input:isDown("a") then state.player.tlozAction = nil end
       return
     end
+    local bHeld = Game.input and Game.input.isDown and Game.input:isDown("b")
+    if action.kind == "sword_charge" then
+      action.timer = action.timer + 1
+      action.frame = 1 + math.floor(action.timer / 6) % 2
+      if action.timer == 12 then play("TLOZ_SWORD_MAGIC_LOOP") end
+      if not bHeld then startSwordSpin(state, action.timer >= 18) end
+      return
+    end
     action.timer = action.timer + 1
     if action.timer % 3 == 0 then action.frame = action.frame + 1 end
     if action.kind == "tool" and action.combo == "bomb"
@@ -245,7 +296,13 @@ return function(mod)
       play("TLOZ_BOMB_BLOW")
     end
     if action.frame == 2 and not action.hit then strike(state, action) end
-    if action.frame > 2 then state.player.tlozAction = nil end
+    if action.frame > 2 then
+      if action.kind == "sword" and bHeld then
+        startSwordCharge(state)
+      else
+        state.player.tlozAction = nil
+      end
+    end
   end
 
   local function updateNpcGlow(state)
@@ -419,7 +476,45 @@ return function(mod)
     if payload and payload.game then install(payload.game) end
   end)
   mod.events:on("world.stepped", function()
-    play("TLOZ_LINK_LAND")
+    local player = currentPlayer()
+    play(player and player.onBike and "TLOZ_LINK_DASH" or "TLOZ_LINK_LAND")
+  end)
+  mod.events:on("world.interacted", function(payload)
+    local kind = payload and payload.kind
+    if kind == "itemball" or kind == "hidden" then
+      play("TLOZ_LINK_PICKUP")
+    elseif kind == "fieldmove" then
+      play("TLOZ_LINK_THROW")
+    end
+  end)
+  mod.events:on("world.boulder_moved", function()
+    play("TLOZ_LINK_PUSH")
+  end)
+  mod.events:on("player.warped", function(payload)
+    if payload and payload.warp then play("TLOZ_LINK_FALL") end
+  end)
+  mod.events:on("world.blacked_out", function()
+    play("TLOZ_LINK_DYING")
+  end)
+  mod.events:on("battle.damage_dealt", function(payload)
+    if playerTarget(payload) and (payload.damage or 0) > 0 then
+      play("TLOZ_LINK_HURT")
+    end
+  end)
+  mod.events:on("battle.status_inflicted", function(payload)
+    if playerTarget(payload) then
+      local status = payload.status
+      play((status == "PAR" or status == "paralyze")
+        and "TLOZ_LINK_SHOCK_FAST" or "TLOZ_LINK_SHOCK")
+    end
+  end)
+  mod.events:on("battle.fainted", function(payload)
+    local side = payload and payload.side
+    if payload and payload.battler
+       and (payload.battler.isPlayer or side == "player"
+         or (type(side) == "table" and side.key == "player")) then
+      play("TLOZ_LINK_DYING")
+    end
   end)
 
   mod.exports.controls = {

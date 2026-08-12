@@ -2,17 +2,17 @@ local Combat = {}
 
 Combat.equipment = {
   { id = "shield", audio = "TLOZ_SHIELD" },
-  { id = "bow", audio = "TLOZ_ARROW_SHOOT" },
-  { id = "boomerang", audio = "TLOZ_BOOMERANG" },
-  { id = "hookshot", audio = "TLOZ_HOOKSHOT" },
-  { id = "hammer", audio = "TLOZ_HAMMER" },
-  { id = "shovel", audio = "TLOZ_SHOVEL" },
-  { id = "magic_powder", audio = "TLOZ_MAGIC_POWDER" },
-  { id = "fire_rod", audio = "TLOZ_FIRE_ROD" },
-  { id = "ice_rod", audio = "TLOZ_ICE_ROD" },
-  { id = "lamp", audio = "TLOZ_LAMP" },
-  { id = "cane", audio = "TLOZ_CANE" },
-  { id = "bomb", audio = "TLOZ_BOMB_DROP" },
+  { id = "bow", audio = "TLOZ_ARROW_SHOOT", hitAudio = "TLOZ_ARROW_HIT" },
+  { id = "boomerang", audio = "TLOZ_BOOMERANG", hitAudio = "TLOZ_BOOMERANG" },
+  { id = "hookshot", audio = "TLOZ_HOOKSHOT", hitAudio = "TLOZ_HOOKSHOT" },
+  { id = "hammer", audio = "TLOZ_HAMMER", hitAudio = "TLOZ_HAMMER_POST" },
+  { id = "shovel", audio = "TLOZ_SHOVEL", hitAudio = "TLOZ_SHOVEL" },
+  { id = "magic_powder", audio = "TLOZ_MAGIC_POWDER", hitAudio = "TLOZ_MAGIC_POWDER" },
+  { id = "fire_rod", audio = "TLOZ_FIRE_ROD", hitAudio = "TLOZ_FIRE_ROD" },
+  { id = "ice_rod", audio = "TLOZ_ICE_ROD", hitAudio = "TLOZ_ICE_ROD" },
+  { id = "lamp", audio = "TLOZ_LAMP", hitAudio = "TLOZ_LAMP" },
+  { id = "cane", audio = "TLOZ_CANE", hitAudio = "TLOZ_CANE_MAGIC" },
+  { id = "bomb", audio = "TLOZ_BOMB_DROP", hitAudio = "TLOZ_BOMB_BLOW" },
 }
 
 function Combat.new()

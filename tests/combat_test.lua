@@ -23,6 +23,11 @@ assert(Combat.registerHit(state, "other").count == 1)
 assert(Combat.currentEquipment(state).id == "shield")
 assert(Combat.nextEquipment(state).id == "bow")
 assert(Combat.nextEquipment(state).id == "boomerang")
+assert(#Combat.equipment == 12)
+for _, equipment in ipairs(Combat.equipment) do
+  assert(equipment.audio)
+  if equipment.id ~= "shield" then assert(equipment.hitAudio) end
+end
 for _ = 1, 10 do Combat.nextEquipment(state) end
 assert(Combat.currentEquipment(state).id == "shield")
 
