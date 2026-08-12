@@ -7,6 +7,8 @@ if ok then
   T.eq(#run.errors, 0, "loads clean (" .. tostring(run.errors[1]) .. ")")
   T.eq(run.mod and run.mod.state, "loaded", "reached the loaded state")
   T.check(Data.audio.sfx.TLOZ_SWORD_1 ~= nil, "sword audio registered")
+  T.check(Data.audio.sfx.TLOZ_ARROW_SHOOT ~= nil, "bow audio registered")
+  T.check(Data.audio.sfx.TLOZ_BOMB_DROP ~= nil, "bomb audio registered")
   T.check(Data.audio.sfx.TLOZ_VILLAGER_DEATH ~= nil, "villager death audio registered")
   run.release()
   T.finish("tloz-recomp-mania")

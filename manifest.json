@@ -6,11 +6,12 @@
   "entry": "main.lua",
   "profile": "overhaul",
   "category": "GAMEPLAY",
+  "supported_generations": [1, 2],
   "game_version": ">=0.0.0-0 <2.0.0",
   "priority": 100,
   "permissions": ["engine_internals"],
   "dependencies": [],
   "optional_dependencies": [],
   "conflicts": [],
-  "description": "Replaces the player with Link, adds sword and shield actions, and gives NPCs three-hit red-particle defeats."
+  "description": "Replaces the player with Link, adds sword, shield, equipment actions, and three-hit red-particle NPC defeats."
 }

@@ -1,8 +1,18 @@
-local NPC = require("src.world.NPC")
-local Player = require("src.world.Player")
-local Runtime = require("src.mods.Runtime")
-local Sound = require("src.core.Sound")
-local SpriteRenderer = require("src.render.SpriteRenderer")
+local function requireEngine(names)
+  for _, name in ipairs(names) do
+    local ok, module = pcall(require, name)
+    if ok then return module end
+  end
+  error("TLoZ: Recomp Mania could not find a compatible engine module")
+end
+
+local NPC = requireEngine({ "src.world.NPC", "src.gen2.world.NPC" })
+local Player = requireEngine({ "src.world.Player", "src.gen2.world.Player" })
+local Runtime = requireEngine({ "src.mods.Runtime", "src.gen2.mods.Runtime" })
+local Sound = requireEngine({ "src.core.Sound", "src.gen2.core.Sound" })
+local SpriteRenderer = requireEngine({
+  "src.render.SpriteRenderer", "src.gen2.render.SpriteRenderer",
+})
 
 local function loadModule(mod, name)
   local source = assert(mod:read(name), name .. " is missing")
@@ -52,6 +62,8 @@ return function(mod)
     { "TLOZ_LAMP", "LTTP_Lamp.wav" },
     { "TLOZ_CANE", "LTTP_Cane.wav" },
     { "TLOZ_CANE_MAGIC", "LTTP_Cane_Magic.wav" },
+    { "TLOZ_BOMB_DROP", "LTTP_Bomb_Drop.wav" },
+    { "TLOZ_BOMB_BLOW", "LTTP_Bomb_Blow.wav" },
     { "TLOZ_VILLAGER_HURT_1", "hit1.ogg" },
     { "TLOZ_VILLAGER_HURT_2", "hit2.ogg" },
     { "TLOZ_VILLAGER_HURT_3", "hit3.ogg" },
@@ -64,7 +76,7 @@ return function(mod)
   end
 
   local function play(name)
-    local game = require("src.core.Game")
+    local game = requireEngine({ "src.core.Game", "src.gen2.core.Game" })
     if game.data then Sound.play(game.data, name) end
   end
 
@@ -86,6 +98,8 @@ return function(mod)
     local name
     if kind == "sword" then
       name = string.format("sword_%d_%s_%d.png", combo, facing, frame)
+    elseif kind == "tool" and combo ~= "shield" then
+      name = string.format("tool_%s_%s_%d.png", combo, facing, frame)
     else
       name = string.format("shield_%s_%d.png", facing, frame)
     end
@@ -181,14 +195,26 @@ return function(mod)
   end
 
   local function startShield(state)
-    state.player.tlozAction = {
-      kind = "shield",
-      combo = 1,
-      frame = 1,
-      timer = 0,
-      hit = false,
-    }
+    state.player.tlozAction = { kind = "shield", combo = "shield", frame = 1,
+      timer = 0, hit = false }
     play("TLOZ_SHIELD")
+  end
+
+  local function startEquipment(state, equipment)
+    if equipment.id == "shield" then
+      startShield(state)
+      return
+    end
+    state.player.tlozAction = { kind = "tool", combo = equipment.id, frame = 1,
+      timer = 0, hit = false }
+    play(equipment.audio)
+  end
+
+  local function selectEquipment(state)
+    state.tlozCombat = state.tlozCombat or Combat.new()
+    local equipment = Combat.nextEquipment(state.tlozCombat)
+    state.tlozSelectedEquipment = equipment.id
+    return equipment
   end
 
   local function updateParticles(state)
@@ -208,12 +234,16 @@ return function(mod)
     if action.kind == "shield" then
       action.frame = 1 + math.floor(action.timer / 6) % 2
       action.timer = action.timer + 1
-      local game = require("src.core.Game")
+      local game = requireEngine({ "src.core.Game", "src.gen2.core.Game" })
       if not game.input:isDown("a") then state.player.tlozAction = nil end
       return
     end
     action.timer = action.timer + 1
     if action.timer % 3 == 0 then action.frame = action.frame + 1 end
+    if action.kind == "tool" and action.combo == "bomb"
+       and action.frame == 2 and not action.hit then
+      play("TLOZ_BOMB_BLOW")
+    end
     if action.frame == 2 and not action.hit then strike(state, action) end
     if action.frame > 2 then state.player.tlozAction = nil end
   end
@@ -244,7 +274,9 @@ return function(mod)
   end
 
   local function install(game)
-    local OverworldState = require("src.world.OverworldController")
+    local OverworldState = requireEngine({
+      "src.world.OverworldController", "src.gen2.world.OverworldController",
+    })
     if not Player.tlozRecompMania then
     Player.tlozRecompMania = true
     local playerNew = Player.new
@@ -303,6 +335,10 @@ return function(mod)
       end
       if player.tlozAction then return end
       if player.moving then return handleInput(state) end
+      if input:wasPressed("select") then
+        selectEquipment(state)
+        return
+      end
       if input:wasPressed("b") and not player.onBike and not player.surfing
          and not player.fishing then
         startSword(state)
@@ -310,7 +346,9 @@ return function(mod)
       end
       if input:isDown("a") and not hasInteractionTarget(state)
          and not player.onBike and not player.surfing and not player.fishing then
-        startShield(state)
+        state.tlozCombat = state.tlozCombat or Combat.new()
+        local equipment = Combat.currentEquipment(state.tlozCombat)
+        startEquipment(state, equipment)
         return
       end
       return handleInput(state)
@@ -332,7 +370,8 @@ return function(mod)
 
   mod.exports.controls = {
     sword = "B",
-    shield = "hold A away from an interaction target",
+    equipment = "Select cycles equipment; hold A away from an interaction target",
+    shield = "default equipment",
   }
 
   Runtime.emit("mod.tloz-recomp-mania.ready", { version = mod.version })

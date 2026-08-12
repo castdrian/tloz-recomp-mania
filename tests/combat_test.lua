@@ -20,4 +20,10 @@ assert(second.count == 2 and not second.defeated)
 assert(third.count == 3 and third.defeated)
 assert(Combat.registerHit(state, "other").count == 1)
 
+assert(Combat.currentEquipment(state).id == "shield")
+assert(Combat.nextEquipment(state).id == "bow")
+assert(Combat.nextEquipment(state).id == "boomerang")
+for _ = 1, 10 do Combat.nextEquipment(state) end
+assert(Combat.currentEquipment(state).id == "shield")
+
 print("tloz-recomp-mania combat tests passed")
