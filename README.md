@@ -7,7 +7,7 @@ Controls:
 - Press B to cycle through four sword attacks; hold B after a swing to charge and release a spin attack.
 - Select cycles the equipment set from shield through bow, boomerang, hookshot, hammer, shovel, powder, rods, lamp, cane, and bomb.
 - Hold A away from an interaction target to use the selected equipment; shield is the default.
-- Sword and equipment strikes damage ordinary overworld NPCs. The third strike defeats the NPC with a red damage glow and red particle burst.
+- Sword strikes damage ordinary overworld NPCs. The third strike defeats the NPC with a red damage glow and red particle burst.
 - Completed movement, pickups, field interactions, boulder pushes, warps, and blackouts use the matching supplied Link action audio.
 
 Install the folder as `mods/tloz-recomp-mania`, enable it from the MODS screen, and start an overworld save. The manifest targets both `gen1` and `gen2`.
