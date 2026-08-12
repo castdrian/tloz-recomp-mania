@@ -86,8 +86,8 @@ return function(mod)
     return world and world.player
   end
 
-  local function playerTarget(payload)
-    local target = payload and payload.target
+  local function isPlayerSubject(payload, subject)
+    local target = subject or (payload and payload.target)
     local side = payload and payload.side
     return (target and target.isPlayer)
       or side == "player"
@@ -199,48 +199,37 @@ return function(mod)
     action.hit = true
   end
 
-  local function startSword(state)
-    state.tlozCombat = state.tlozCombat or Combat.new()
-    local combo = Combat.nextCombo(state.tlozCombat)
-    state.player.tlozAction = {
-      kind = "sword",
+  local function newAction(kind, combo, hitAudio)
+    return {
+      kind = kind,
       combo = combo,
       frame = 1,
       timer = 0,
       hit = false,
-      hitAudio = "TLOZ_SWORD_TAP",
+      hitAudio = hitAudio,
     }
+  end
+
+  local function startSword(state)
+    state.tlozCombat = state.tlozCombat or Combat.new()
+    local combo = Combat.nextCombo(state.tlozCombat)
+    state.player.tlozAction = newAction("sword", combo, "TLOZ_SWORD_TAP")
     play("TLOZ_SWORD_" .. tostring(combo))
   end
 
   local function startSwordCharge(state)
-    state.player.tlozAction = {
-      kind = "sword_charge",
-      combo = 4,
-      frame = 1,
-      timer = 0,
-      hit = false,
-      hitAudio = "TLOZ_SWORD_TAP",
-    }
+    state.player.tlozAction = newAction("sword_charge", 4, "TLOZ_SWORD_TAP")
     play("TLOZ_SWORD_CHARGE")
   end
 
   local function startSwordSpin(state, magic)
-    state.player.tlozAction = {
-      kind = "sword_spin",
-      combo = 4,
-      frame = 1,
-      timer = 0,
-      hit = false,
-      hitAudio = "TLOZ_SWORD_TAP",
-    }
+    state.player.tlozAction = newAction("sword_spin", 4, "TLOZ_SWORD_TAP")
     play(magic and "TLOZ_SWORD_SPIN_MAGIC" or "TLOZ_SWORD_SPIN")
     if magic then play("TLOZ_SWORD_MAGIC") end
   end
 
   local function startShield(state)
-    state.player.tlozAction = { kind = "shield", combo = "shield", frame = 1,
-      timer = 0, hit = false }
+    state.player.tlozAction = newAction("shield", "shield")
     play("TLOZ_SHIELD")
   end
 
@@ -249,8 +238,7 @@ return function(mod)
       startShield(state)
       return
     end
-    state.player.tlozAction = { kind = "tool", combo = equipment.id, frame = 1,
-      timer = 0, hit = false, hitAudio = equipment.hitAudio }
+    state.player.tlozAction = newAction("tool", equipment.id, equipment.hitAudio)
     play(equipment.audio)
   end
 
@@ -295,7 +283,14 @@ return function(mod)
        and action.frame == 2 and not action.hit then
       play("TLOZ_BOMB_BLOW")
     end
-    if action.frame == 2 and not action.hit then strike(state, action) end
+    if action.frame == 2 and not action.hit then
+      if action.kind == "tool" then
+        if action.combo ~= "bomb" then play(action.hitAudio) end
+        action.hit = true
+      else
+        strike(state, action)
+      end
+    end
     if action.frame > 2 then
       if action.kind == "sword" and bHeld then
         startSwordCharge(state)
@@ -475,9 +470,22 @@ return function(mod)
   mod.events:on("game.ready", function(payload)
     if payload and payload.game then install(payload.game) end
   end)
-  mod.events:on("world.stepped", function()
+  local previousStep
+  mod.events:on("world.stepped", function(payload)
     local player = currentPlayer()
-    play(player and player.onBike and "TLOZ_LINK_DASH" or "TLOZ_LINK_LAND")
+    local jumped = payload and previousStep
+      and payload.mapId == previousStep.mapId
+      and type(payload.x) == "number" and type(payload.y) == "number"
+      and math.abs(payload.x - previousStep.x)
+        + math.abs(payload.y - previousStep.y) > 1
+    if jumped then
+      play("TLOZ_LINK_JUMP")
+    else
+      play(player and player.onBike and "TLOZ_LINK_DASH" or "TLOZ_LINK_LAND")
+    end
+    if payload and type(payload.x) == "number" and type(payload.y) == "number" then
+      previousStep = { mapId = payload.mapId, x = payload.x, y = payload.y }
+    end
   end)
   mod.events:on("world.interacted", function(payload)
     local kind = payload and payload.kind
@@ -497,22 +505,20 @@ return function(mod)
     play("TLOZ_LINK_DYING")
   end)
   mod.events:on("battle.damage_dealt", function(payload)
-    if playerTarget(payload) and (payload.damage or 0) > 0 then
+    if isPlayerSubject(payload) and (payload.damage or 0) > 0 then
       play("TLOZ_LINK_HURT")
     end
   end)
   mod.events:on("battle.status_inflicted", function(payload)
-    if playerTarget(payload) then
+    if isPlayerSubject(payload) then
       local status = payload.status
       play((status == "PAR" or status == "paralyze")
         and "TLOZ_LINK_SHOCK_FAST" or "TLOZ_LINK_SHOCK")
     end
   end)
   mod.events:on("battle.fainted", function(payload)
-    local side = payload and payload.side
     if payload and payload.battler
-       and (payload.battler.isPlayer or side == "player"
-         or (type(side) == "table" and side.key == "player")) then
+       and isPlayerSubject(payload, payload.battler) then
       play("TLOZ_LINK_DYING")
     end
   end)
