@@ -1,0 +1,330 @@
+local NPC = require("src.world.NPC")
+local Player = require("src.world.Player")
+local Runtime = require("src.mods.Runtime")
+local Sound = require("src.core.Sound")
+local SpriteRenderer = require("src.render.SpriteRenderer")
+
+local function loadModule(mod, name)
+  local source = assert(mod:read(name), name .. " is missing")
+  local chunk = assert(load(source, "@" .. mod.path .. "/" .. name))
+  return chunk()
+end
+
+return function(mod)
+  local Combat = loadModule(mod, "combat.lua")
+  local assetPath = function(name)
+    return mod.assets:path("assets/" .. name)
+  end
+
+  local audio = {
+    { "TLOZ_LINK_DASH", "LTTP_Link_Dash.wav" },
+    { "TLOZ_LINK_DYING", "LTTP_Link_Dying.wav" },
+    { "TLOZ_LINK_FALL", "LTTP_Link_Fall.wav" },
+    { "TLOZ_LINK_HURT", "LTTP_Link_Hurt.wav" },
+    { "TLOZ_LINK_JUMP", "LTTP_Link_Jump.wav" },
+    { "TLOZ_LINK_LAND", "LTTP_Link_Land.wav" },
+    { "TLOZ_LINK_PICKUP", "LTTP_Link_Pickup.wav" },
+    { "TLOZ_LINK_PUSH", "LTTP_Link_Push.wav" },
+    { "TLOZ_LINK_SHOCK", "LTTP_Link_Shock.wav" },
+    { "TLOZ_LINK_SHOCK_FAST", "LTTP_Link_Shock_Fast.wav" },
+    { "TLOZ_LINK_THROW", "LTTP_Link_Throw.wav" },
+    { "TLOZ_SWORD_1", "LTTP_Sword1.wav" },
+    { "TLOZ_SWORD_2", "LTTP_Sword2.wav" },
+    { "TLOZ_SWORD_3", "LTTP_Sword3.wav" },
+    { "TLOZ_SWORD_4", "LTTP_Sword4.wav" },
+    { "TLOZ_SWORD_CHARGE", "LTTP_Sword_Charge.wav" },
+    { "TLOZ_SWORD_MAGIC", "LTTP_Sword_Magic.wav" },
+    { "TLOZ_SWORD_MAGIC_LOOP", "LTTP_Sword_Magic_Loop.wav" },
+    { "TLOZ_SWORD_SPIN", "LTTP_Sword_Spin.wav" },
+    { "TLOZ_SWORD_SPIN_MAGIC", "LTTP_Sword_SpinMagic.wav" },
+    { "TLOZ_SWORD_TAP", "LTTP_Sword_Tap.wav" },
+    { "TLOZ_SHIELD", "LTTP_Shield.wav" },
+    { "TLOZ_ARROW_HIT", "LTTP_Arrow_Hit.wav" },
+    { "TLOZ_ARROW_SHOOT", "LTTP_Arrow_Shoot.wav" },
+    { "TLOZ_BOOMERANG", "LTTP_Boomerang.wav" },
+    { "TLOZ_HOOKSHOT", "LTTP_Hookshot.wav" },
+    { "TLOZ_HAMMER", "LTTP_Hammer.wav" },
+    { "TLOZ_HAMMER_POST", "LTTP_Hammer_Post.wav" },
+    { "TLOZ_SHOVEL", "LTTP_Shovel.wav" },
+    { "TLOZ_MAGIC_POWDER", "LTTP_MagicPowder.wav" },
+    { "TLOZ_FIRE_ROD", "LTTP_FireRod.wav" },
+    { "TLOZ_ICE_ROD", "LTTP_IceRod.wav" },
+    { "TLOZ_LAMP", "LTTP_Lamp.wav" },
+    { "TLOZ_CANE", "LTTP_Cane.wav" },
+    { "TLOZ_CANE_MAGIC", "LTTP_Cane_Magic.wav" },
+    { "TLOZ_VILLAGER_HURT_1", "hit1.ogg" },
+    { "TLOZ_VILLAGER_HURT_2", "hit2.ogg" },
+    { "TLOZ_VILLAGER_HURT_3", "hit3.ogg" },
+    { "TLOZ_VILLAGER_HURT_4", "hit4.ogg" },
+    { "TLOZ_VILLAGER_DEATH", "death.ogg" },
+  }
+
+  for _, entry in ipairs(audio) do
+    mod.content.sfx:register(entry[1], { file = assetPath("audio/" .. entry[2]) })
+  end
+
+  local function play(name)
+    local game = require("src.core.Game")
+    if game.data then Sound.play(game.data, name) end
+  end
+
+  local spriteCache = {}
+  local function sprite(name, frames, walker, seed)
+    local key = table.concat({ name, frames, walker and "walker" or "fixed", seed or "" }, "|")
+    if not spriteCache[key] then
+      spriteCache[key] = SpriteRenderer.new({
+        image = assetPath("sprites/" .. name),
+        frames = frames,
+        walker = walker,
+        trueColor = true,
+      }, seed or key)
+    end
+    return spriteCache[key]
+  end
+
+  local function actionSprite(kind, combo, facing, frame)
+    local name
+    if kind == "sword" then
+      name = string.format("sword_%d_%s_%d.png", combo, facing, frame)
+    else
+      name = string.format("shield_%s_%d.png", facing, frame)
+    end
+    return sprite(name, 1, false, "tloz-action-" .. name)
+  end
+
+  local function targetAt(state)
+    local player = state.player
+    local x, y = player:facingCell()
+    local npc = state:npcAtCell(x, y)
+    if npc and npc.def and not npc.def.item and not npc.def.pokemon
+       and not npc.def.trainerClass and not npc.tlozDefeated then
+      return npc
+    end
+    return nil
+  end
+
+  local function hasInteractionTarget(state)
+    local player = state.player
+    local x, y = player:facingCell()
+    if state:npcAtCell(x, y) then return true end
+    if state.map and state.map:isCounterCell(x, y) then
+      local nx, ny = x, y
+      if player.facing == "up" then ny = ny - 1 end
+      if player.facing == "down" then ny = ny + 1 end
+      if player.facing == "left" then nx = nx - 1 end
+      if player.facing == "right" then nx = nx + 1 end
+      if state:npcAtCell(nx, ny) then return true end
+    end
+    return state.map and state.map:signAtCell(x, y) ~= nil
+  end
+
+  local function spawnParticles(state, npc)
+    state.tlozParticles = state.tlozParticles or {}
+    for index = 1, 18 do
+      local angle = (index / 18) * math.pi * 2
+      local speed = 0.6 + (index % 4) * 0.35
+      state.tlozParticles[#state.tlozParticles + 1] = {
+        x = npc.px + 8,
+        y = npc.py + 8,
+        vx = math.cos(angle) * speed,
+        vy = math.sin(angle) * speed - 1.1,
+        life = 22 + index % 8,
+        maxLife = 30,
+        size = 1 + index % 2,
+      }
+    end
+  end
+
+  local function removeNpc(state, npc)
+    npc.tlozDefeated = true
+    npc.def.hidden = true
+    npc.frozen = true
+    spawnParticles(state, npc)
+    for index = #state.npcs, 1, -1 do
+      if state.npcs[index] == npc then table.remove(state.npcs, index) end
+    end
+    for index = #state.entities, 1, -1 do
+      if state.entities[index] == npc then table.remove(state.entities, index) end
+    end
+  end
+
+  local function strike(state, action)
+    local npc = targetAt(state)
+    if not npc then return end
+    local result = Combat.registerHit(state.tlozCombat, npc.id)
+    npc.tlozGlowFrames = 10
+    play("TLOZ_SWORD_TAP")
+    if result.defeated then
+      play("TLOZ_VILLAGER_DEATH")
+      removeNpc(state, npc)
+    else
+      play("TLOZ_VILLAGER_HURT_" .. tostring((result.count - 1) % 4 + 1))
+    end
+    action.hit = true
+  end
+
+  local function startSword(state)
+    state.tlozCombat = state.tlozCombat or Combat.new()
+    local combo = Combat.nextCombo(state.tlozCombat)
+    state.player.tlozAction = {
+      kind = "sword",
+      combo = combo,
+      frame = 1,
+      timer = 0,
+      hit = false,
+    }
+    play("TLOZ_SWORD_" .. tostring(combo))
+  end
+
+  local function startShield(state)
+    state.player.tlozAction = {
+      kind = "shield",
+      combo = 1,
+      frame = 1,
+      timer = 0,
+      hit = false,
+    }
+    play("TLOZ_SHIELD")
+  end
+
+  local function updateParticles(state)
+    for index = #state.tlozParticles, 1, -1 do
+      local particle = state.tlozParticles[index]
+      particle.life = particle.life - 1
+      particle.x = particle.x + particle.vx
+      particle.y = particle.y + particle.vy
+      particle.vy = particle.vy + 0.08
+      if particle.life <= 0 then table.remove(state.tlozParticles, index) end
+    end
+  end
+
+  local function updateAction(state)
+    local action = state.player and state.player.tlozAction
+    if not action then return end
+    if action.kind == "shield" then
+      action.frame = 1 + math.floor(action.timer / 6) % 2
+      action.timer = action.timer + 1
+      local game = require("src.core.Game")
+      if not game.input:isDown("a") then state.player.tlozAction = nil end
+      return
+    end
+    action.timer = action.timer + 1
+    if action.timer % 3 == 0 then action.frame = action.frame + 1 end
+    if action.frame == 2 and not action.hit then strike(state, action) end
+    if action.frame > 2 then state.player.tlozAction = nil end
+  end
+
+  local function updateNpcGlow(state)
+    for _, npc in ipairs(state.npcs or {}) do
+      if npc.tlozGlowFrames and npc.tlozGlowFrames > 0 then
+        npc.tlozGlowFrames = npc.tlozGlowFrames - 1
+      end
+    end
+  end
+
+  local function drawParticles(state)
+    if not love.graphics or not state.tlozParticles then return end
+    local camera = state.camera
+    for _, particle in ipairs(state.tlozParticles) do
+      local alpha = math.min(1, particle.life / 8)
+      love.graphics.setColor(1, 0.05, 0.05, alpha)
+      love.graphics.rectangle("fill", math.floor(particle.x - camera.x),
+        math.floor(particle.y - camera.y), particle.size, particle.size)
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+  end
+
+  local function install(game)
+    local OverworldState = require("src.world.OverworldController")
+    if not Player.tlozRecompMania then
+    Player.tlozRecompMania = true
+    local playerNew = Player.new
+    local playerPose = Player.pose
+    Player.new = function(data, x, y, facing)
+      local player = playerNew(data, x, y, facing)
+      local link = sprite("link-walk.png", 6, true, "tloz-link")
+      player.sprite = link
+      player.surfSprite = link
+      player.surfPikachuSprite = link
+      player.bikeSprite = link
+      return player
+    end
+    Player.pose = function(player, ...)
+      local current, px, py, facing, phase, flip, hopping = playerPose(player, ...)
+      local action = player.tlozAction
+      if not action then return current, px, py, facing, phase, flip, hopping end
+      return actionSprite(action.kind, action.combo, facing, action.frame),
+        px, py, facing, 0, false, hopping
+    end
+    end
+
+    if not NPC.tlozRecompMania then
+    NPC.tlozRecompMania = true
+    local npcDraw = NPC.draw
+    NPC.draw = function(npc, ...)
+      if npc.tlozGlowFrames and npc.tlozGlowFrames > 0 and love.graphics then
+        local r, g, b, a = love.graphics.getColor()
+        love.graphics.setColor(1, 0.08, 0.08, a)
+        npcDraw(npc, ...)
+        love.graphics.setColor(r, g, b, a)
+        return
+      end
+      return npcDraw(npc, ...)
+    end
+    end
+
+    if not OverworldState.tlozRecompMania then
+    OverworldState.tlozRecompMania = true
+    local update = OverworldState.update
+    local handleInput = OverworldState.handleInput
+    local drawWorld = OverworldState.drawWorld
+    OverworldState.update = function(state, dt)
+      state.tlozParticles = state.tlozParticles or {}
+      state.tlozCombat = state.tlozCombat or Combat.new()
+      updateParticles(state)
+      updateNpcGlow(state)
+      updateAction(state)
+      return update(state, dt)
+    end
+    OverworldState.handleInput = function(state)
+      local input = game.input
+      local player = state.player
+      if not input or not player or player.inputLocked then
+        return handleInput(state)
+      end
+      if player.tlozAction then return end
+      if player.moving then return handleInput(state) end
+      if input:wasPressed("b") and not player.onBike and not player.surfing
+         and not player.fishing then
+        startSword(state)
+        return
+      end
+      if input:isDown("a") and not hasInteractionTarget(state)
+         and not player.onBike and not player.surfing and not player.fishing then
+        startShield(state)
+        return
+      end
+      return handleInput(state)
+    end
+    OverworldState.drawWorld = function(state, ...)
+      local result = drawWorld(state, ...)
+      drawParticles(state)
+      return result
+    end
+    end
+  end
+
+  mod.events:on("game.ready", function(payload)
+    if payload and payload.game then install(payload.game) end
+  end)
+  mod.events:on("world.stepped", function()
+    play("TLOZ_LINK_LAND")
+  end)
+
+  mod.exports.controls = {
+    sword = "B",
+    shield = "hold A away from an interaction target",
+  }
+
+  Runtime.emit("mod.tloz-recomp-mania.ready", { version = mod.version })
+end
