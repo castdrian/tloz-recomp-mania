@@ -29,56 +29,70 @@ return function(mod)
   end
 
   local audio = {
-    { "TLOZ_LINK_DASH", "LTTP_Link_Dash.wav" },
-    { "TLOZ_LINK_DYING", "LTTP_Link_Dying.wav" },
-    { "TLOZ_LINK_FALL", "LTTP_Link_Fall.wav" },
-    { "TLOZ_LINK_HURT", "LTTP_Link_Hurt.wav" },
-    { "TLOZ_LINK_JUMP", "LTTP_Link_Jump.wav" },
-    { "TLOZ_LINK_LAND", "LTTP_Link_Land.wav" },
-    { "TLOZ_LINK_PICKUP", "LTTP_Link_Pickup.wav" },
-    { "TLOZ_LINK_PUSH", "LTTP_Link_Push.wav" },
-    { "TLOZ_LINK_SHOCK", "LTTP_Link_Shock.wav" },
-    { "TLOZ_LINK_SHOCK_FAST", "LTTP_Link_Shock_Fast.wav" },
-    { "TLOZ_LINK_THROW", "LTTP_Link_Throw.wav" },
-    { "TLOZ_SWORD_1", "LTTP_Sword1.wav" },
-    { "TLOZ_SWORD_2", "LTTP_Sword2.wav" },
-    { "TLOZ_SWORD_3", "LTTP_Sword3.wav" },
-    { "TLOZ_SWORD_4", "LTTP_Sword4.wav" },
-    { "TLOZ_SWORD_CHARGE", "LTTP_Sword_Charge.wav" },
-    { "TLOZ_SWORD_MAGIC", "LTTP_Sword_Magic.wav" },
-    { "TLOZ_SWORD_MAGIC_LOOP", "LTTP_Sword_Magic_Loop.wav" },
-    { "TLOZ_SWORD_SPIN", "LTTP_Sword_Spin.wav" },
-    { "TLOZ_SWORD_SPIN_MAGIC", "LTTP_Sword_SpinMagic.wav" },
-    { "TLOZ_SWORD_TAP", "LTTP_Sword_Tap.wav" },
-    { "TLOZ_SHIELD", "LTTP_Shield.wav" },
-    { "TLOZ_ARROW_HIT", "LTTP_Arrow_Hit.wav" },
-    { "TLOZ_ARROW_SHOOT", "LTTP_Arrow_Shoot.wav" },
-    { "TLOZ_BOOMERANG", "LTTP_Boomerang.wav" },
-    { "TLOZ_HOOKSHOT", "LTTP_Hookshot.wav" },
-    { "TLOZ_HAMMER", "LTTP_Hammer.wav" },
-    { "TLOZ_HAMMER_POST", "LTTP_Hammer_Post.wav" },
-    { "TLOZ_SHOVEL", "LTTP_Shovel.wav" },
-    { "TLOZ_MAGIC_POWDER", "LTTP_MagicPowder.wav" },
-    { "TLOZ_FIRE_ROD", "LTTP_FireRod.wav" },
-    { "TLOZ_ICE_ROD", "LTTP_IceRod.wav" },
-    { "TLOZ_LAMP", "LTTP_Lamp.wav" },
-    { "TLOZ_CANE", "LTTP_Cane.wav" },
-    { "TLOZ_CANE_MAGIC", "LTTP_Cane_Magic.wav" },
-    { "TLOZ_BOMB_DROP", "LTTP_Bomb_Drop.wav" },
-    { "TLOZ_BOMB_BLOW", "LTTP_Bomb_Blow.wav" },
-    { "TLOZ_VILLAGER_HURT_1", "hit1.ogg" },
-    { "TLOZ_VILLAGER_HURT_2", "hit2.ogg" },
-    { "TLOZ_VILLAGER_HURT_3", "hit3.ogg" },
-    { "TLOZ_VILLAGER_HURT_4", "hit4.ogg" },
-    { "TLOZ_VILLAGER_DEATH", "death.ogg" },
+    { "TLOZ_LINK_DASH", "mc/MC_Link_Run.wav" },
+    { "TLOZ_LINK_DYING", "mc/MC_Link_Die_Tune.wav" },
+    { "TLOZ_LINK_FALL", "mc/MC_Link_Fall.wav" },
+    { "TLOZ_LINK_HURT", "mc/MC_Link_Hurt.wav" },
+    { "TLOZ_LINK_VOICE", "mc/MC_Link_Sword1.wav" },
+    { "TLOZ_LINK_VOICE_1", "mc/MC_Link_Sword1.wav" },
+    { "TLOZ_LINK_VOICE_2", "mc/MC_Link_Sword2.wav" },
+    { "TLOZ_LINK_VOICE_3", "mc/MC_Link_Sword3.wav" },
+    { "TLOZ_LINK_VOICE_4", "mc/MC_Link_Sword_Spin1.wav" },
+    { "TLOZ_LINK_JUMP", "mc/MC_Link_Jump.wav" },
+    { "TLOZ_LINK_LAND", "mc/MC_Link_Run.wav" },
+    { "TLOZ_LINK_PICKUP", "mc/MC_Rupee.wav" },
+    { "TLOZ_LINK_PUSH", "mc/MC_Link_Push.wav" },
+    { "TLOZ_LINK_SHOCK", "mc/MC_Link_Hurt.wav" },
+    { "TLOZ_LINK_SHOCK_FAST", "mc/MC_Link_Hurt.wav" },
+    { "TLOZ_LINK_THROW", "mc/MC_Link_Lift.wav" },
+    { "TLOZ_SWORD_1", "mc/MC_Link_Sword.wav" },
+    { "TLOZ_SWORD_2", "mc/MC_Link_Sword.wav" },
+    { "TLOZ_SWORD_3", "mc/MC_Link_Sword.wav" },
+    { "TLOZ_SWORD_4", "mc/MC_Link_Sword.wav" },
+    { "TLOZ_SWORD_CHARGE", "mc/MC_Link_Sword_Charge.wav" },
+    { "TLOZ_SWORD_MAGIC", "mc/MC_Link_Sword_Beam.wav" },
+    { "TLOZ_SWORD_MAGIC_LOOP", "mc/MC_Link_Sword_Charge.wav" },
+    { "TLOZ_SWORD_SPIN", "mc/MC_Link_Sword_Spin.wav" },
+    { "TLOZ_SWORD_SPIN_MAGIC", "mc/MC_Link_Sword_Spin.wav" },
+    { "TLOZ_SWORD_TAP", "mc/MC_Sword_TapBombWall.wav" },
+    { "TLOZ_SHIELD", "mc/MC_Link_Shield.wav" },
+    { "TLOZ_ARROW_HIT", "mc/MC_Arrow_Hit.wav" },
+    { "TLOZ_ARROW_SHOOT", "mc/MC_Arrow_Shoot.wav" },
+    { "TLOZ_BOOMERANG", "mc/MC_Boomerang.wav" },
+    { "TLOZ_HOOKSHOT", "mc/MC_Boomerang.wav" },
+    { "TLOZ_HAMMER", "mc/MC_Hammer.wav" },
+    { "TLOZ_HAMMER_POST", "mc/MC_Hammer.wav" },
+    { "TLOZ_SHOVEL", "mc/MC_MoleMitts_Dig.wav" },
+    { "TLOZ_MAGIC_POWDER", "mc/MC_GustJar_Blast1.wav" },
+    { "TLOZ_FIRE_ROD", "mc/MC_CaneOfPacci_Shoot.wav" },
+    { "TLOZ_ICE_ROD", "mc/MC_IceBlock_Slide.wav" },
+    { "TLOZ_LAMP", "mc/MC_FlameLantern_On.wav" },
+    { "TLOZ_CANE", "mc/MC_CaneOfPacci_Shoot.wav" },
+    { "TLOZ_CANE_MAGIC", "mc/MC_CaneOfPacci_Hit.wav" },
+    { "TLOZ_BOMB_DROP", "mc/MC_Bomb_Drop.wav" },
+    { "TLOZ_BOMB_BLOW", "mc/MC_Bomb_Blow.wav" },
+    { "TLOZ_VILLAGER_HURT_1", "Minecraft_Villager_Hurt_1.wav" },
+    { "TLOZ_VILLAGER_HURT_2", "Minecraft_Villager_Hurt_2.wav" },
+    { "TLOZ_VILLAGER_HURT_3", "Minecraft_Villager_Hurt_3.wav" },
+    { "TLOZ_VILLAGER_HURT_4", "Minecraft_Villager_Hurt_4.wav" },
+    { "TLOZ_VILLAGER_DEATH", "Minecraft_Villager_Death.wav" },
   }
 
   for _, entry in ipairs(audio) do
     mod.content.sfx:register(entry[1], { file = assetPath("audio/" .. entry[2]) })
   end
 
+  local playData
+  local failedAudio = {}
   local function play(name)
-    if Game.data then Sound.play(Game.data, name) end
+    local data = playData or Game.data
+    if not data then return nil end
+    local source = Sound.play(data, name)
+    if not source and not failedAudio[name] then
+      failedAudio[name] = true
+      mod.log:warn("audio key %s did not start", name)
+    end
+    return source
   end
 
   local function currentPlayer()
@@ -214,6 +228,7 @@ return function(mod)
     state.tlozCombat = state.tlozCombat or Combat.new()
     local combo = Combat.nextCombo(state.tlozCombat)
     state.player.tlozAction = newAction("sword", combo, "TLOZ_SWORD_TAP")
+    play("TLOZ_LINK_VOICE_" .. tostring(combo))
     play("TLOZ_SWORD_" .. tostring(combo))
   end
 
@@ -468,7 +483,10 @@ return function(mod)
   end
 
   mod.events:on("game.ready", function(payload)
-    if payload and payload.game then install(payload.game) end
+    if payload and payload.game then
+      playData = payload.game.data
+      install(payload.game)
+    end
   end)
   local previousStep
   mod.events:on("world.stepped", function(payload)

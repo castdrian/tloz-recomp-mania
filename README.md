@@ -8,10 +8,10 @@ Controls:
 - Select cycles the equipment set from shield through bow, boomerang, hookshot, hammer, shovel, powder, rods, lamp, cane, and bomb.
 - Hold A away from an interaction target to use the selected equipment; shield is the default.
 - Sword strikes damage ordinary overworld NPCs. The third strike defeats the NPC with a red damage glow and red particle burst.
-- Completed movement, pickups, field interactions, boulder pushes, warps, and blackouts use the matching supplied Link action audio.
+- Completed movement, pickups, field interactions, boulder pushes, warps, blackouts, and sword swings use the matching supplied Link action or voice audio.
 
 Install the folder as `mods/tloz-recomp-mania`, enable it from the MODS screen, and start an overworld save. The manifest targets both `gen1` and `gen2`.
 
-The Link sprite source is [The Spriters Resource asset 7584](https://www.spriters-resource.com/snes/legendofzeldaalinktothepast/asset/7584/). The Link action audio is from [LTTP.zip](https://noproblo.dayjo.org/zeldasounds/lttp/LTTP.zip). Villager audio is sourced from Mojang’s Minecraft client assets.
+The Link sprite source is [The Spriters Resource Minish Cap asset 6369](https://www.spriters-resource.com/game_boy_advance/thelegendofzeldatheminishcap/asset/6369/). The Link action audio is from the [Minish Cap sound set](https://noproblo.dayjo.org/zeldasounds/mc/). Villager audio is packaged as PCM WAV files under the Minecraft villager sound names so the simulator can decode them reliably.
 
 The package uses the API-2 engine seams shared by the Gen 1 and Gen 2 branches. `modkit gen2check` passes for the package. The checkout used for simulator verification exposes Gen 1 Red, Blue, and Yellow only; a literal Gen 2 Gold, Silver, or Crystal run requires installing this package into the corresponding gen2recomp branch.

@@ -13,6 +13,8 @@ if ok then
   local audio = {
     "TLOZ_LINK_DASH", "TLOZ_LINK_DYING", "TLOZ_LINK_FALL",
     "TLOZ_LINK_HURT", "TLOZ_LINK_JUMP", "TLOZ_LINK_LAND",
+    "TLOZ_LINK_VOICE", "TLOZ_LINK_VOICE_1", "TLOZ_LINK_VOICE_2",
+    "TLOZ_LINK_VOICE_3", "TLOZ_LINK_VOICE_4",
     "TLOZ_LINK_PICKUP", "TLOZ_LINK_PUSH", "TLOZ_LINK_SHOCK",
     "TLOZ_LINK_SHOCK_FAST", "TLOZ_LINK_THROW", "TLOZ_SWORD_1",
     "TLOZ_SWORD_2", "TLOZ_SWORD_3", "TLOZ_SWORD_4",
@@ -30,6 +32,18 @@ if ok then
   for _, name in ipairs(audio) do
     T.check(Data.audio.sfx[name] ~= nil, name .. " registered")
   end
+  T.eq(Data.audio.sfx.TLOZ_VILLAGER_HURT_1.file:match("Minecraft_Villager_Hurt_1%.wav$"),
+    "Minecraft_Villager_Hurt_1.wav", "villager hurt uses PCM wav")
+  T.eq(Data.audio.sfx.TLOZ_VILLAGER_DEATH.file:match("Minecraft_Villager_Death%.wav$"),
+    "Minecraft_Villager_Death.wav", "villager death uses PCM wav")
+  T.eq(Data.audio.sfx.TLOZ_LINK_VOICE.file:match("mc/MC_Link_Sword1%.wav$"),
+    "mc/MC_Link_Sword1.wav", "Link voice uses Minish Cap audio")
+  T.eq(Data.audio.sfx.TLOZ_LINK_VOICE_2.file:match("mc/MC_Link_Sword2%.wav$"),
+    "mc/MC_Link_Sword2.wav", "second Link voice uses Minish Cap audio")
+  T.eq(Data.audio.sfx.TLOZ_LINK_VOICE_3.file:match("mc/MC_Link_Sword3%.wav$"),
+    "mc/MC_Link_Sword3.wav", "third Link voice uses Minish Cap audio")
+  T.eq(Data.audio.sfx.TLOZ_SWORD_1.file:match("mc/MC_Link_Sword%.wav$"),
+    "mc/MC_Link_Sword.wav", "sword swing uses Minish Cap audio")
   run.release()
   T.finish("tloz-recomp-mania")
 else
