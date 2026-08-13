@@ -37,6 +37,16 @@ for path in assets/sprites/mc/sword_swing_1.png \
   assert_transparent_corner "$path"
 done
 
+for path in assets/sprites/shield_down_1.png \
+            assets/sprites/shield_left_1.png \
+            assets/sprites/shield_right_1.png \
+            assets/sprites/shield_up_1.png \
+            assets/sprites/use_item_1.png \
+            assets/sprites/use_item_2.png; do
+  assert_dimensions "$path" 16x16
+  assert_transparent_corner "$path"
+done
+
 /opt/homebrew/bin/rg -q 'Minecraft_Villager_Hurt_1\.wav' "$root/main.lua"
 /opt/homebrew/bin/rg -q 'Minecraft_Villager_Death\.wav' "$root/main.lua"
 /opt/homebrew/bin/rg -q 'PaletteFX\.markSpriteRedraw' "$root/main.lua"

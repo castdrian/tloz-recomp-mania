@@ -15,14 +15,21 @@ end
 
 local state = Movement.new()
 local poses = {}
-for index = 1, 8 do
-  poses[index] = Movement.pose(state, 1, false)
+for clock = 1, 16 do
+  Movement.sync(state, true, clock, false)
+  poses[clock] = Movement.pose(state)
 end
 assertSequence(poses,
-  { "walk", "walk", "walk_alt", "walk_alt", "walk", "walk", "walk_alt", "walk_alt" },
+  { "walk", "walk", "walk", "walk", "walk", "walk", "walk", "walk",
+    "walk_alt", "walk_alt", "walk_alt", "walk_alt", "walk_alt", "walk_alt",
+    "walk_alt", "walk_alt" },
   "walking cadence")
 
-assertEqual(Movement.pose(state, 0, false), "stand", "stand reset")
-assertEqual(Movement.pose(state, 1, true), "walk_alt", "step phase seed")
+Movement.sync(state, false, 16, false)
+assertEqual(Movement.pose(state), "stand", "stand reset")
+Movement.sync(state, true, 17, true)
+assertEqual(Movement.pose(state), "walk_alt", "step phase seed")
+Movement.sync(state, true, 25, true)
+assertEqual(Movement.pose(state), "walk", "step phase cadence")
 
 print("tloz-recomp-mania movement tests passed")

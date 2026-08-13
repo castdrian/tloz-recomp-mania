@@ -25,6 +25,7 @@ end
 
 return function(mod)
   local Combat = loadModule(mod, "combat.lua")
+  local Action = loadModule(mod, "action.lua")
   local Movement = loadModule(mod, "movement.lua")
   local assetPath = function(name)
     return mod.assets:path("assets/" .. name)
@@ -162,9 +163,9 @@ return function(mod)
   local function movementSprite()
     return {
       movement = Movement.new(),
-      draw = function(self, px, py, camX, camY, facing, walkPhase, stepFlip)
+      draw = function(self, px, py, camX, camY, facing)
         local direction = facing
-        local pose = Movement.pose(self.movement, walkPhase, stepFlip)
+        local pose = Movement.pose(self.movement)
         local image = mod.assets:image("assets/sprites/mc/move_"
           .. direction .. "_" .. pose .. ".png")
         local x = math.floor(px - camX)
@@ -192,22 +193,57 @@ return function(mod)
     up = { 6, 7, 8 },
   }
 
+  local swordSwingAnchors = {
+    [1] = { 18, 10 },
+    [2] = { 15, 5 },
+    [3] = { 8, 3 },
+    [4] = { -2, 10 },
+    [5] = { 1, 16 },
+    [6] = { 8, 17 },
+    [7] = { 9, 18 },
+    [8] = { 14, 17 },
+    [9] = { 16, 10 },
+  }
+
+  local swordChargeAnchors = {
+    [1] = { 8, 6 },
+    [2] = { 7, 6 },
+  }
+
+  local swordSpinAnchors = {
+    [1] = { 0, 10 },
+    [2] = { 1, 17 },
+    [3] = { 8, 17 },
+    [4] = { 13, 16 },
+    [5] = { 16, 10 },
+    [6] = { 14, 17 },
+    [7] = { 8, 3 },
+    [8] = { 2, 6 },
+  }
+
+  local function actionAnchor(anchors, frame)
+    local anchor = anchors[math.min(frame, #anchors)]
+    return anchor[1], anchor[2]
+  end
+
   local function actionSprite(kind, combo, facing, frame)
     local name
     if kind == "sword" then
       local frames = swordSwingFrames[facing] or swordSwingFrames.down
       local sourceFrame = frames[math.min(frame, #frames)]
       name = string.format("sword_swing_%d.png", sourceFrame)
-      return looseSprite(name, "tloz-action-" .. name, 8, 12, false)
+      local anchorX, anchorY = actionAnchor(swordSwingAnchors, sourceFrame)
+      return looseSprite(name, "tloz-action-" .. name, anchorX, anchorY, false)
     elseif kind == "sword_charge" then
       name = string.format("sword_charge_%d.png", math.min(frame, 2))
-      return looseSprite(name, "tloz-action-" .. name, 8, 12, true)
+      local anchorX, anchorY = actionAnchor(swordChargeAnchors, frame)
+      return looseSprite(name, "tloz-action-" .. name, anchorX, anchorY, true)
     elseif kind == "sword_spin" then
       name = string.format("sword_spin_%d.png", math.min(frame, 8))
-      return looseSprite(name, "tloz-action-" .. name, 8, 12, true)
+      local anchorX, anchorY = actionAnchor(swordSpinAnchors, frame)
+      return looseSprite(name, "tloz-action-" .. name, anchorX, anchorY, true)
     elseif kind == "tool" and combo ~= "shield" then
-      local assetFacing = facing == "right" and "left" or facing
-      name = string.format("tool_%s_%s_%d.png", combo, assetFacing, frame)
+      name = string.format("use_item_%d.png", math.min(frame, 2))
     else
       local assetFacing = facing == "right" and "left" or facing
       name = string.format("shield_%s_%d.png", assetFacing, frame)
@@ -289,40 +325,27 @@ return function(mod)
     action.hit = true
   end
 
-  local function newAction(kind, combo, hitAudio, maxFrame, hitFrame)
-    return {
-      kind = kind,
-      combo = combo,
-      frame = 1,
-      timer = 0,
-      hit = false,
-      hitAudio = hitAudio,
-      maxFrame = maxFrame or 2,
-      hitFrame = hitFrame or 2,
-    }
-  end
-
   local function startSword(state)
     state.tlozCombat = state.tlozCombat or Combat.new()
     local combo = Combat.nextCombo(state.tlozCombat)
-    state.player.tlozAction = newAction("sword", combo, "TLOZ_SWORD_TAP", 3, 2)
+    state.player.tlozAction = Action.new("sword", combo, "TLOZ_SWORD_TAP", 3, 2)
     play("TLOZ_LINK_VOICE_" .. tostring(combo))
     play("TLOZ_SWORD_" .. tostring(combo))
   end
 
   local function startSwordCharge(state)
-    state.player.tlozAction = newAction("sword_charge", 4, "TLOZ_SWORD_TAP", 2, 2)
+    state.player.tlozAction = Action.new("sword_charge", 4, "TLOZ_SWORD_TAP", 2, 2)
     play("TLOZ_SWORD_CHARGE")
   end
 
   local function startSwordSpin(state, magic)
-    state.player.tlozAction = newAction("sword_spin", 4, "TLOZ_SWORD_TAP", 8, 4)
+    state.player.tlozAction = Action.new("sword_spin", 4, "TLOZ_SWORD_TAP", 8, 4)
     play(magic and "TLOZ_SWORD_SPIN_MAGIC" or "TLOZ_SWORD_SPIN")
     if magic then play("TLOZ_SWORD_MAGIC") end
   end
 
   local function startShield(state)
-    state.player.tlozAction = newAction("shield", "shield")
+    state.player.tlozAction = Action.new("shield", "shield")
     play("TLOZ_SHIELD")
   end
 
@@ -331,7 +354,7 @@ return function(mod)
       startShield(state)
       return
     end
-    state.player.tlozAction = newAction("tool", equipment.id, equipment.hitAudio)
+    state.player.tlozAction = Action.new("tool", equipment.id, equipment.hitAudio)
     play(equipment.audio)
   end
 
@@ -363,6 +386,7 @@ return function(mod)
       return
     end
     local bHeld = Game.input and Game.input.isDown and Game.input:isDown("b")
+    Action.trackButton(action, bHeld)
     if action.kind == "sword_charge" then
       action.timer = action.timer + 1
       action.frame = 1 + math.floor(action.timer / 6) % 2
@@ -387,7 +411,7 @@ return function(mod)
       end
     end
     if action.frame > action.maxFrame then
-      if action.kind == "sword" and bHeld then
+      if Action.canCharge(action, bHeld) then
         startSwordCharge(state)
       else
         state.player.tlozAction = nil
@@ -429,6 +453,10 @@ return function(mod)
       link = movementSprite()
       player.tlozMovementSprite = link
     end
+    local active = player.moving or player.stepLanded
+      or (player.bumpFrames and player.bumpFrames > 0)
+    Movement.sync(link.movement, active, player.animClock or 0,
+      player.stepFlip)
     player.sprite = link
     player.surfSprite = link
     player.surfPikachuSprite = link
@@ -492,8 +520,9 @@ return function(mod)
           end
         end
         updateAction(state)
+        local result = update(state, dt)
         applyPlayerVisual(state.player)
-        return update(state, dt)
+        return result
       end
 
       if not isGen2 then
