@@ -4,6 +4,7 @@ local Input = require("src.core.Input")
 local NPC = require("src.world.NPC")
 local Runtime = require("src.mods.Runtime")
 local Sound = require("src.core.Sound")
+local PaletteFX = require("src.render.PaletteFX")
 local SpriteRenderer = require("src.render.SpriteRenderer")
 
 local isGen2 = GameVersion.generation and GameVersion.generation() == 2 or false
@@ -71,11 +72,11 @@ return function(mod)
     { "TLOZ_CANE_MAGIC", "mc/MC_CaneOfPacci_Hit.wav" },
     { "TLOZ_BOMB_DROP", "mc/MC_Bomb_Drop.wav" },
     { "TLOZ_BOMB_BLOW", "mc/MC_Bomb_Blow.wav" },
-    { "TLOZ_VILLAGER_HURT_1", "Minecraft_Villager_Hurt_1.wav" },
-    { "TLOZ_VILLAGER_HURT_2", "Minecraft_Villager_Hurt_2.wav" },
-    { "TLOZ_VILLAGER_HURT_3", "Minecraft_Villager_Hurt_3.wav" },
-    { "TLOZ_VILLAGER_HURT_4", "Minecraft_Villager_Hurt_4.wav" },
-    { "TLOZ_VILLAGER_DEATH", "Minecraft_Villager_Death.wav" },
+    { "TLOZ_VILLAGER_HURT_1", "mc/MC_Enemy_Hit.wav" },
+    { "TLOZ_VILLAGER_HURT_2", "mc/MC_Enemy_Hit.wav" },
+    { "TLOZ_VILLAGER_HURT_3", "mc/MC_Enemy_Hit.wav" },
+    { "TLOZ_VILLAGER_HURT_4", "mc/MC_Enemy_Hit.wav" },
+    { "TLOZ_VILLAGER_DEATH", "mc/MC_Enemy_Kill.wav" },
   }
 
   for _, entry in ipairs(audio) do
@@ -109,6 +110,7 @@ return function(mod)
   end
 
   local spriteCache = {}
+  local looseSpriteCache = {}
   local function sprite(name, frames, walker, seed)
     local key = table.concat({ name, frames, walker and "walker" or "fixed", seed or "" }, "|")
     if not spriteCache[key] then
@@ -122,18 +124,82 @@ return function(mod)
     return spriteCache[key]
   end
 
+  local function looseSprite(name, seed)
+    local key = table.concat({ name, seed or "" }, "|")
+    if looseSpriteCache[key] then return looseSpriteCache[key] end
+    local image = mod.assets:image("assets/sprites/mc/" .. name)
+    local result = { image = image, width = image:getWidth(), height = image:getHeight() }
+    function result:draw(px, py, camX, camY, facing, walkPhase, stepFlip)
+      local x = math.floor(px - camX) - 8
+      local y = math.floor(py - camY) - 12
+      local flip = facing == "right"
+      if flip then
+        love.graphics.draw(self.image, x + self.width, y, 0, -1, 1)
+      else
+        love.graphics.draw(self.image, x, y)
+      end
+      PaletteFX.markTrueColor(x, y, self.width, self.height)
+    end
+    function result:drawTile(path, x, y, flip)
+      local tile = mod.assets:image(path)
+      local width = tile:getWidth()
+      if flip then
+        love.graphics.draw(tile, x + width, y, 0, -1, 1)
+      else
+        love.graphics.draw(tile, x, y)
+      end
+      PaletteFX.markTrueColor(x, y, width, tile:getHeight())
+    end
+    looseSpriteCache[key] = result
+    return result
+  end
+
+  local function movementSprite()
+    return {
+      draw = function(_, px, py, camX, camY, facing, walkPhase, stepFlip)
+        local direction = facing == "right" and "left" or facing
+        local pose = walkPhase == 1 and "walk" or "stand"
+        local alternate = walkPhase == 1 and stepFlip and "_alt" or ""
+        local image = mod.assets:image("assets/sprites/mc/move_"
+          .. direction .. "_" .. pose .. alternate .. ".png")
+        local x = math.floor(px - camX) - 8
+        local y = math.floor(py - camY) - 12
+        if facing == "right" then
+          love.graphics.draw(image, x + image:getWidth(), y, 0, -1, 1)
+        else
+          love.graphics.draw(image, x, y)
+        end
+        PaletteFX.markTrueColor(x, y, image:getWidth(), image:getHeight())
+      end,
+      drawTile = function(_, path, x, y, flip)
+        local image = mod.assets:image(path)
+        local width = image:getWidth()
+        if flip then
+          love.graphics.draw(image, x + width, y, 0, -1, 1)
+        else
+          love.graphics.draw(image, x, y)
+        end
+        PaletteFX.markTrueColor(x, y, width, image:getHeight())
+      end,
+    }
+  end
+
   local function actionSprite(kind, combo, facing, frame)
+    local assetFacing = facing == "right" and "left" or facing
     local name
     if kind == "sword" then
-      name = string.format("sword_%d_%s_%d.png", combo, facing, frame)
+      name = string.format("sword_%d_%s_%d.png", combo, assetFacing, frame)
     elseif kind == "sword_charge" then
-      name = string.format("sword_1_%s_%d.png", facing, frame)
+      name = string.format("sword_charge_%s_%d.png", assetFacing, frame)
     elseif kind == "sword_spin" then
-      name = string.format("sword_4_%s_%d.png", facing, frame)
+      name = string.format("sword_spin_%s_%d.png", assetFacing, frame)
     elseif kind == "tool" and combo ~= "shield" then
-      name = string.format("tool_%s_%s_%d.png", combo, facing, frame)
+      name = string.format("tool_%s_%s_%d.png", combo, assetFacing, frame)
     else
-      name = string.format("shield_%s_%d.png", facing, frame)
+      name = string.format("shield_%s_%d.png", assetFacing, frame)
+    end
+    if kind == "sword" or kind == "sword_charge" or kind == "sword_spin" then
+      return looseSprite(name, "tloz-action-" .. name)
     end
     return sprite(name, 1, false, "tloz-action-" .. name)
   end
@@ -203,7 +269,6 @@ return function(mod)
     if not npc then return end
     local result = Combat.registerHit(state.tlozCombat, npc.id)
     npc.tlozGlowFrames = 10
-    play(action.hitAudio or "TLOZ_SWORD_TAP")
     if result.defeated then
       play("TLOZ_VILLAGER_DEATH")
       removeNpc(state, npc)
@@ -344,7 +409,7 @@ return function(mod)
   end
 
   local function setLinkSprites(player)
-    local link = sprite("link-walk.png", 6, true, "tloz-link")
+    local link = movementSprite()
     player.sprite = link
     player.surfSprite = link
     player.surfPikachuSprite = link

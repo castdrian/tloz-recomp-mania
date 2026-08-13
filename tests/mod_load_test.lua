@@ -32,10 +32,10 @@ if ok then
   for _, name in ipairs(audio) do
     T.check(Data.audio.sfx[name] ~= nil, name .. " registered")
   end
-  T.eq(Data.audio.sfx.TLOZ_VILLAGER_HURT_1.file:match("Minecraft_Villager_Hurt_1%.wav$"),
-    "Minecraft_Villager_Hurt_1.wav", "villager hurt uses PCM wav")
-  T.eq(Data.audio.sfx.TLOZ_VILLAGER_DEATH.file:match("Minecraft_Villager_Death%.wav$"),
-    "Minecraft_Villager_Death.wav", "villager death uses PCM wav")
+  T.eq(Data.audio.sfx.TLOZ_VILLAGER_HURT_1.file:match("mc/MC_Enemy_Hit%.wav$"),
+    "mc/MC_Enemy_Hit.wav", "villager hurt uses Minish Cap enemy-hit audio")
+  T.eq(Data.audio.sfx.TLOZ_VILLAGER_DEATH.file:match("mc/MC_Enemy_Kill%.wav$"),
+    "mc/MC_Enemy_Kill.wav", "villager death uses Minish Cap enemy-kill audio")
   T.eq(Data.audio.sfx.TLOZ_LINK_VOICE.file:match("mc/MC_Link_Sword1%.wav$"),
     "mc/MC_Link_Sword1.wav", "Link voice uses Minish Cap audio")
   T.eq(Data.audio.sfx.TLOZ_LINK_VOICE_2.file:match("mc/MC_Link_Sword2%.wav$"),
