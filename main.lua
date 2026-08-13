@@ -72,11 +72,11 @@ return function(mod)
     { "TLOZ_CANE_MAGIC", "mc/MC_CaneOfPacci_Hit.wav" },
     { "TLOZ_BOMB_DROP", "mc/MC_Bomb_Drop.wav" },
     { "TLOZ_BOMB_BLOW", "mc/MC_Bomb_Blow.wav" },
-    { "TLOZ_VILLAGER_HURT_1", "mc/MC_Enemy_Hit.wav" },
-    { "TLOZ_VILLAGER_HURT_2", "mc/MC_Enemy_Hit.wav" },
-    { "TLOZ_VILLAGER_HURT_3", "mc/MC_Enemy_Hit.wav" },
-    { "TLOZ_VILLAGER_HURT_4", "mc/MC_Enemy_Hit.wav" },
-    { "TLOZ_VILLAGER_DEATH", "mc/MC_Enemy_Kill.wav" },
+    { "TLOZ_VILLAGER_HURT_1", "Minecraft_Villager_Hurt_1.wav" },
+    { "TLOZ_VILLAGER_HURT_2", "Minecraft_Villager_Hurt_2.wav" },
+    { "TLOZ_VILLAGER_HURT_3", "Minecraft_Villager_Hurt_3.wav" },
+    { "TLOZ_VILLAGER_HURT_4", "Minecraft_Villager_Hurt_4.wav" },
+    { "TLOZ_VILLAGER_DEATH", "Minecraft_Villager_Death.wav" },
   }
 
   for _, entry in ipairs(audio) do
@@ -124,21 +124,25 @@ return function(mod)
     return spriteCache[key]
   end
 
-  local function looseSprite(name, seed)
-    local key = table.concat({ name, seed or "" }, "|")
+  local function looseSprite(name, seed, anchorX, anchorY, flipRight)
+    local key = table.concat({ name, seed or "", anchorX or 0, anchorY or 0,
+      flipRight and "flip" or "fixed" }, "|")
     if looseSpriteCache[key] then return looseSpriteCache[key] end
     local image = mod.assets:image("assets/sprites/mc/" .. name)
     local result = { image = image, width = image:getWidth(), height = image:getHeight() }
+    result.anchorX = anchorX or 0
+    result.anchorY = anchorY or 4
     function result:draw(px, py, camX, camY, facing, walkPhase, stepFlip)
-      local x = math.floor(px - camX) - 8
-      local y = math.floor(py - camY) - 12
-      local flip = facing == "right"
+      local x = math.floor(px - camX) - self.anchorX
+      local y = math.floor(py - camY) - self.anchorY
+      local flip = flipRight and facing == "right"
       if flip then
         love.graphics.draw(self.image, x + self.width, y, 0, -1, 1)
+        PaletteFX.markSpriteRedraw(self.image, nil, x + self.width, y, -1)
       else
         love.graphics.draw(self.image, x, y)
+        PaletteFX.markSpriteRedraw(self.image, nil, x, y, 1)
       end
-      PaletteFX.markTrueColor(x, y, self.width, self.height)
     end
     function result:drawTile(path, x, y, flip)
       local tile = mod.assets:image(path)
@@ -157,19 +161,15 @@ return function(mod)
   local function movementSprite()
     return {
       draw = function(_, px, py, camX, camY, facing, walkPhase, stepFlip)
-        local direction = facing == "right" and "left" or facing
+        local direction = facing
         local pose = walkPhase == 1 and "walk" or "stand"
         local alternate = walkPhase == 1 and stepFlip and "_alt" or ""
         local image = mod.assets:image("assets/sprites/mc/move_"
           .. direction .. "_" .. pose .. alternate .. ".png")
-        local x = math.floor(px - camX) - 8
-        local y = math.floor(py - camY) - 12
-        if facing == "right" then
-          love.graphics.draw(image, x + image:getWidth(), y, 0, -1, 1)
-        else
-          love.graphics.draw(image, x, y)
-        end
-        PaletteFX.markTrueColor(x, y, image:getWidth(), image:getHeight())
+        local x = math.floor(px - camX)
+        local y = math.floor(py - camY) - 4
+        love.graphics.draw(image, x, y)
+        PaletteFX.markSpriteRedraw(image, nil, x, y, 1)
       end,
       drawTile = function(_, path, x, y, flip)
         local image = mod.assets:image(path)
@@ -184,22 +184,32 @@ return function(mod)
     }
   end
 
+  local swordSwingFrames = {
+    left = { 1, 2, 3 },
+    down = { 3, 4, 5 },
+    right = { 4, 5, 6 },
+    up = { 6, 7, 8 },
+  }
+
   local function actionSprite(kind, combo, facing, frame)
-    local assetFacing = facing == "right" and "left" or facing
     local name
     if kind == "sword" then
-      name = string.format("sword_%d_%s_%d.png", combo, assetFacing, frame)
+      local frames = swordSwingFrames[facing] or swordSwingFrames.down
+      local sourceFrame = frames[math.min(frame, #frames)]
+      name = string.format("sword_swing_%d.png", sourceFrame)
+      return looseSprite(name, "tloz-action-" .. name, 8, 12, false)
     elseif kind == "sword_charge" then
-      name = string.format("sword_charge_%s_%d.png", assetFacing, frame)
+      name = string.format("sword_charge_%d.png", math.min(frame, 2))
+      return looseSprite(name, "tloz-action-" .. name, 8, 12, true)
     elseif kind == "sword_spin" then
-      name = string.format("sword_spin_%s_%d.png", assetFacing, frame)
+      name = string.format("sword_spin_%d.png", math.min(frame, 8))
+      return looseSprite(name, "tloz-action-" .. name, 8, 12, true)
     elseif kind == "tool" and combo ~= "shield" then
+      local assetFacing = facing == "right" and "left" or facing
       name = string.format("tool_%s_%s_%d.png", combo, assetFacing, frame)
     else
+      local assetFacing = facing == "right" and "left" or facing
       name = string.format("shield_%s_%d.png", assetFacing, frame)
-    end
-    if kind == "sword" or kind == "sword_charge" or kind == "sword_spin" then
-      return looseSprite(name, "tloz-action-" .. name)
     end
     return sprite(name, 1, false, "tloz-action-" .. name)
   end
@@ -278,7 +288,7 @@ return function(mod)
     action.hit = true
   end
 
-  local function newAction(kind, combo, hitAudio)
+  local function newAction(kind, combo, hitAudio, maxFrame, hitFrame)
     return {
       kind = kind,
       combo = combo,
@@ -286,24 +296,26 @@ return function(mod)
       timer = 0,
       hit = false,
       hitAudio = hitAudio,
+      maxFrame = maxFrame or 2,
+      hitFrame = hitFrame or 2,
     }
   end
 
   local function startSword(state)
     state.tlozCombat = state.tlozCombat or Combat.new()
     local combo = Combat.nextCombo(state.tlozCombat)
-    state.player.tlozAction = newAction("sword", combo, "TLOZ_SWORD_TAP")
+    state.player.tlozAction = newAction("sword", combo, "TLOZ_SWORD_TAP", 3, 2)
     play("TLOZ_LINK_VOICE_" .. tostring(combo))
     play("TLOZ_SWORD_" .. tostring(combo))
   end
 
   local function startSwordCharge(state)
-    state.player.tlozAction = newAction("sword_charge", 4, "TLOZ_SWORD_TAP")
+    state.player.tlozAction = newAction("sword_charge", 4, "TLOZ_SWORD_TAP", 2, 2)
     play("TLOZ_SWORD_CHARGE")
   end
 
   local function startSwordSpin(state, magic)
-    state.player.tlozAction = newAction("sword_spin", 4, "TLOZ_SWORD_TAP")
+    state.player.tlozAction = newAction("sword_spin", 4, "TLOZ_SWORD_TAP", 8, 4)
     play(magic and "TLOZ_SWORD_SPIN_MAGIC" or "TLOZ_SWORD_SPIN")
     if magic then play("TLOZ_SWORD_MAGIC") end
   end
@@ -358,12 +370,14 @@ return function(mod)
       return
     end
     action.timer = action.timer + 1
-    if action.timer % 3 == 0 then action.frame = action.frame + 1 end
+    local cadence = action.kind == "sword" and 4
+      or action.kind == "sword_spin" and 2 or 3
+    if action.timer % cadence == 0 then action.frame = action.frame + 1 end
     if action.kind == "tool" and action.combo == "bomb"
        and action.frame == 2 and not action.hit then
       play("TLOZ_BOMB_BLOW")
     end
-    if action.frame == 2 and not action.hit then
+    if action.frame == action.hitFrame and not action.hit then
       if action.kind == "tool" then
         if action.combo ~= "bomb" then play(action.hitAudio) end
         action.hit = true
@@ -371,7 +385,7 @@ return function(mod)
         strike(state, action)
       end
     end
-    if action.frame > 2 then
+    if action.frame > action.maxFrame then
       if action.kind == "sword" and bHeld then
         startSwordCharge(state)
       else

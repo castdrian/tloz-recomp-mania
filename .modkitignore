@@ -1,2 +1,4 @@
 tests/combat_test.lua
 tests/mod_load_test.lua
+*.modpkg
+tloz-recomp-mania-v0.1.0.modpkg
