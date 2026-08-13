@@ -25,6 +25,7 @@ end
 
 return function(mod)
   local Combat = loadModule(mod, "combat.lua")
+  local Movement = loadModule(mod, "movement.lua")
   local assetPath = function(name)
     return mod.assets:path("assets/" .. name)
   end
@@ -160,12 +161,12 @@ return function(mod)
 
   local function movementSprite()
     return {
-      draw = function(_, px, py, camX, camY, facing, walkPhase, stepFlip)
+      movement = Movement.new(),
+      draw = function(self, px, py, camX, camY, facing, walkPhase, stepFlip)
         local direction = facing
-        local pose = walkPhase == 1 and "walk" or "stand"
-        local alternate = walkPhase == 1 and stepFlip and "_alt" or ""
+        local pose = Movement.pose(self.movement, walkPhase, stepFlip)
         local image = mod.assets:image("assets/sprites/mc/move_"
-          .. direction .. "_" .. pose .. alternate .. ".png")
+          .. direction .. "_" .. pose .. ".png")
         local x = math.floor(px - camX)
         local y = math.floor(py - camY) - 4
         love.graphics.draw(image, x, y)
@@ -423,7 +424,11 @@ return function(mod)
   end
 
   local function setLinkSprites(player)
-    local link = movementSprite()
+    local link = player.tlozMovementSprite
+    if not link then
+      link = movementSprite()
+      player.tlozMovementSprite = link
+    end
     player.sprite = link
     player.surfSprite = link
     player.surfPikachuSprite = link
