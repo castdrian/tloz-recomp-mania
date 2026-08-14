@@ -7,3 +7,4 @@
 - Added Select equipment cycling and A-triggered equipment action poses.
 - Added Link action audio and Minecraft villager hit/kill audio.
 - Added red NPC damage glow and third-hit red particle defeats.
+- Fixed door and stair transitions using the falling sound, and widened sword reach to cover adjacent targets.

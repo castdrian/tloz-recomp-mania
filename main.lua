@@ -27,6 +27,9 @@ return function(mod)
   local Combat = loadModule(mod, "combat.lua")
   local Action = loadModule(mod, "action.lua")
   local Movement = loadModule(mod, "movement.lua")
+  local Feedback = loadModule(mod, "feedback.lua")
+  local Hitbox = loadModule(mod, "hitbox.lua")
+  local WarpEffects = loadModule(mod, "warp_effects.lua")
   local assetPath = function(name)
     return mod.assets:path("assets/" .. name)
   end
@@ -253,13 +256,10 @@ return function(mod)
 
   local function targetAt(state)
     local player = state.player
-    local x, y = player:facingCell()
-    local npc = state:npcAtCell(x, y)
-    if npc and npc.def and not npc.def.item and not npc.def.pokemon
-       and not npc.def.trainerClass and not npc.tlozDefeated then
-      return npc
-    end
-    return nil
+    return Hitbox.target(player, state.npcs, function(npc)
+      return npc.def and not npc.def.item and not npc.def.pokemon
+        and not npc.def.trainerClass and not npc.tlozDefeated
+    end)
   end
 
   local function hasInteractionTarget(state)
@@ -277,28 +277,17 @@ return function(mod)
     return state.map and state.map:signAtCell(x, y) ~= nil
   end
 
-  local function spawnParticles(state, npc)
+  local function appendParticles(state, particles)
     state.tlozParticles = state.tlozParticles or {}
-    for index = 1, 18 do
-      local angle = (index / 18) * math.pi * 2
-      local speed = 0.6 + (index % 4) * 0.35
-      state.tlozParticles[#state.tlozParticles + 1] = {
-        x = npc.px + 8,
-        y = npc.py + 8,
-        vx = math.cos(angle) * speed,
-        vy = math.sin(angle) * speed - 1.1,
-        life = 22 + index % 8,
-        maxLife = 30,
-        size = 1 + index % 2,
-      }
+    for _, particle in ipairs(particles or {}) do
+      state.tlozParticles[#state.tlozParticles + 1] = particle
     end
   end
 
-  local function removeNpc(state, npc)
+  local function removeNpc(state, npc, particles)
     npc.tlozDefeated = true
-    npc.tlozGlowFrames = 10
     npc.frozen = true
-    spawnParticles(state, npc)
+    appendParticles(state, particles)
   end
 
   local function purgeNpc(state, npc)
@@ -315,13 +304,9 @@ return function(mod)
     local npc = targetAt(state)
     if not npc then return end
     local result = Combat.registerHit(state.tlozCombat, npc.id)
-    npc.tlozGlowFrames = 10
-    if result.defeated then
-      play("TLOZ_VILLAGER_DEATH")
-      removeNpc(state, npc)
-    else
-      play("TLOZ_VILLAGER_HURT_" .. tostring((result.count - 1) % 4 + 1))
-    end
+    local feedback = Feedback.hit(npc, result)
+    play(feedback.audio)
+    if feedback.defeated then removeNpc(state, npc, feedback.particles) end
     action.hit = true
   end
 
@@ -422,11 +407,10 @@ return function(mod)
   local function updateNpcGlow(state)
     local defeated = {}
     for _, npc in ipairs(state.npcs or {}) do
-      if npc.tlozGlowFrames and npc.tlozGlowFrames > 0 then
-        npc.tlozGlowFrames = npc.tlozGlowFrames - 1
-        if npc.tlozDefeated and npc.tlozGlowFrames == 0 then
-          defeated[#defeated + 1] = npc
-        end
+      local wasGlowing = (npc.tlozGlowFrames or 0) > 0
+      Feedback.tick(npc)
+      if wasGlowing and npc.tlozDefeated and npc.tlozGlowFrames == 0 then
+        defeated[#defeated + 1] = npc
       end
     end
     for _, npc in ipairs(defeated) do purgeNpc(state, npc) end
@@ -438,7 +422,8 @@ return function(mod)
     local camera = state.camera
     for _, particle in ipairs(state.tlozParticles) do
       local alpha = math.min(1, particle.life / 8)
-      love.graphics.setColor(1, 0.05, 0.05, alpha)
+      local color = particle.color or { 1, 0.05, 0.05 }
+      love.graphics.setColor(color[1], color[2], color[3], alpha)
       love.graphics.rectangle("fill",
         math.floor((particle.x - camera.x) * scale),
         math.floor((particle.y - camera.y) * scale),
@@ -630,7 +615,9 @@ return function(mod)
     play("TLOZ_LINK_PUSH")
   end)
   mod.events:on("player.warped", function(payload)
-    if payload and payload.warp then play("TLOZ_LINK_FALL") end
+    local world = Game.world or Game.overworld
+    local sound = WarpEffects.fallSound(world, payload)
+    if sound then play(sound) end
   end)
   mod.events:on("world.blacked_out", function()
     play("TLOZ_LINK_DYING")
