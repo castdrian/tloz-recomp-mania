@@ -2,6 +2,7 @@
   "id": "tloz-recomp-mania",
   "name": "TLoZ: Recomp Mania",
   "version": "0.1.0",
+  "github": "castdrian/tloz-recomp-mania",
   "api": 2,
   "entry": "main.lua",
   "profile": "overhaul",
@@ -14,5 +15,5 @@
   "dependencies": [],
   "optional_dependencies": [],
   "conflicts": [],
-  "description": "Replaces the player with Link, adds sword, shield, equipment actions, and three-hit red-particle NPC defeats."
+  "description": "The Legend of Zelda, sort of?"
 }

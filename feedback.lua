@@ -2,6 +2,7 @@ local Feedback = {}
 
 Feedback.GLOW_FRAMES = 10
 Feedback.PARTICLE_COUNT = 18
+Feedback.RESPAWN_SECONDS = 10
 
 local function hurtAudio(count)
   return "TLOZ_VILLAGER_HURT_" .. tostring((count - 1) % 4 + 1)
@@ -35,6 +36,12 @@ function Feedback.hit(npc, result)
     defeated = defeated,
     particles = defeated and Feedback.particles(npc) or nil,
   }
+end
+
+function Feedback.apply(npc, result, play)
+  local feedback = Feedback.hit(npc, result)
+  if play then play(feedback.audio) end
+  return feedback
 end
 
 function Feedback.tick(npc)

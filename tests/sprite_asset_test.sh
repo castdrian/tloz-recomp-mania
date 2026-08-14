@@ -21,6 +21,16 @@ assert_transparent_corner() {
   }
 }
 
+assert_rgba() {
+  path=$1
+  color_type=$(/usr/bin/od -An -tu1 -j25 -N1 "$root/$path" \
+    | /usr/bin/tr -d '[:space:]')
+  test "$color_type" = "6" || {
+    printf 'expected %s to use PNG color type 6, got %s\n' "$path" "$color_type" >&2
+    exit 1
+  }
+}
+
 for direction in down left right up; do
   for pose in stand walk walk_alt; do
     path="assets/sprites/mc/move_${direction}_${pose}.png"
@@ -37,10 +47,16 @@ for path in assets/sprites/mc/sword_swing_1.png \
   assert_transparent_corner "$path"
 done
 
-for path in assets/sprites/shield_down_1.png \
-            assets/sprites/shield_left_1.png \
-            assets/sprites/shield_right_1.png \
-            assets/sprites/shield_up_1.png \
+for direction in down left right up; do
+  for frame in 1 2; do
+    path="assets/sprites/shield_${direction}_${frame}.png"
+    assert_dimensions "$path" 16x16
+    assert_transparent_corner "$path"
+    assert_rgba "$path"
+  done
+done
+
+for path in \
             assets/sprites/use_item_1.png \
             assets/sprites/use_item_2.png; do
   assert_dimensions "$path" 16x16
@@ -48,7 +64,9 @@ for path in assets/sprites/shield_down_1.png \
 done
 
 /opt/homebrew/bin/rg -q 'Minecraft_Villager_Hurt_1\.wav' "$root/main.lua"
+/opt/homebrew/bin/rg -q 'Minecraft_Villager_Hurt_4\.wav' "$root/main.lua"
 /opt/homebrew/bin/rg -q 'Minecraft_Villager_Death\.wav' "$root/main.lua"
 /opt/homebrew/bin/rg -q 'PaletteFX\.markSpriteRedraw' "$root/main.lua"
+/opt/homebrew/bin/rg -q 'assetFacing = facing' "$root/main.lua"
 
 printf '%s\n' 'tloz-recomp-mania sprite asset tests passed'

@@ -43,4 +43,10 @@ assert(third.particles[1].color[1] == 1)
 assert(third.particles[1].color[2] < 0.1)
 assert(third.particles[1].color[3] < 0.1)
 
+local played = {}
+local applied = Feedback.apply(npc, { count = 2, defeated = false },
+  function(name) played[#played + 1] = name end)
+assert(applied.audio == "TLOZ_VILLAGER_HURT_2")
+assert(played[1] == "TLOZ_VILLAGER_HURT_2")
+
 print("tloz-recomp-mania bugfix tests passed")

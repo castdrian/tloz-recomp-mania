@@ -33,9 +33,9 @@ if ok then
     T.check(Data.audio.sfx[name] ~= nil, name .. " registered")
   end
   T.eq(Data.audio.sfx.TLOZ_VILLAGER_HURT_1.file:match("Minecraft_Villager_Hurt_1%.wav$"),
-    "Minecraft_Villager_Hurt_1.wav", "villager hurt uses Minecraft audio")
+    "Minecraft_Villager_Hurt_1.wav", "villager hurt uses playable Minecraft audio")
   T.eq(Data.audio.sfx.TLOZ_VILLAGER_DEATH.file:match("Minecraft_Villager_Death%.wav$"),
-    "Minecraft_Villager_Death.wav", "villager death uses Minecraft audio")
+    "Minecraft_Villager_Death.wav", "villager death uses normalized Minecraft audio")
   T.eq(Data.audio.sfx.TLOZ_LINK_VOICE.file:match("mc/MC_Link_Sword1%.wav$"),
     "mc/MC_Link_Sword1.wav", "Link voice uses Minish Cap audio")
   T.eq(Data.audio.sfx.TLOZ_LINK_VOICE_2.file:match("mc/MC_Link_Sword2%.wav$"),

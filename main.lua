@@ -28,6 +28,7 @@ return function(mod)
   local Action = loadModule(mod, "action.lua")
   local Movement = loadModule(mod, "movement.lua")
   local Feedback = loadModule(mod, "feedback.lua")
+  local FeedbackRender = loadModule(mod, "feedback_render.lua")
   local Hitbox = loadModule(mod, "hitbox.lua")
   local WarpEffects = loadModule(mod, "warp_effects.lua")
   local assetPath = function(name)
@@ -129,11 +130,12 @@ return function(mod)
     return spriteCache[key]
   end
 
-  local function looseSprite(name, seed, anchorX, anchorY, flipRight)
+  local function looseSprite(name, seed, anchorX, anchorY, flipRight, assetRoot)
     local key = table.concat({ name, seed or "", anchorX or 0, anchorY or 0,
-      flipRight and "flip" or "fixed" }, "|")
+      flipRight and "flip" or "fixed", assetRoot or "mc/" }, "|")
     if looseSpriteCache[key] then return looseSpriteCache[key] end
-    local image = mod.assets:image("assets/sprites/mc/" .. name)
+    local root = assetRoot == nil and "mc/" or assetRoot
+    local image = mod.assets:image("assets/sprites/" .. root .. name)
     local result = { image = image, width = image:getWidth(), height = image:getHeight() }
     result.anchorX = anchorX or 0
     result.anchorY = anchorY or 4
@@ -244,12 +246,13 @@ return function(mod)
     elseif kind == "sword_spin" then
       name = string.format("sword_spin_%d.png", math.min(frame, 8))
       local anchorX, anchorY = actionAnchor(swordSpinAnchors, frame)
-      return looseSprite(name, "tloz-action-" .. name, anchorX, anchorY, true)
+      return looseSprite(name, "tloz-action-" .. name, anchorX, anchorY, false)
     elseif kind == "tool" and combo ~= "shield" then
       name = string.format("use_item_%d.png", math.min(frame, 2))
     else
-      local assetFacing = facing == "right" and "left" or facing
+      local assetFacing = facing
       name = string.format("shield_%s_%d.png", assetFacing, frame)
+      return looseSprite(name, "tloz-action-" .. name, 0, 4, false, "")
     end
     return sprite(name, 1, false, "tloz-action-" .. name)
   end
@@ -292,11 +295,79 @@ return function(mod)
 
   local function purgeNpc(state, npc)
     npc.def.hidden = true
+    npc.tlozGlowFrames = 0
     for index = #state.npcs, 1, -1 do
       if state.npcs[index] == npc then table.remove(state.npcs, index) end
     end
     for index = #state.entities, 1, -1 do
       if state.entities[index] == npc then table.remove(state.entities, index) end
+    end
+    state.tlozRespawns = state.tlozRespawns or {}
+    if not npc.tlozRespawnQueued then
+      npc.tlozRespawnQueued = true
+      npc.tlozRespawn = {
+        remaining = Feedback.RESPAWN_SECONDS,
+        cellX = npc.tlozSpawnCellX or npc.def.x or npc.cellX,
+        cellY = npc.tlozSpawnCellY or npc.def.y or npc.cellY,
+        facing = npc.tlozSpawnFacing or npc.facing,
+      }
+      state.tlozRespawns[#state.tlozRespawns + 1] = npc
+    end
+  end
+
+  local function containsNpc(list, npc)
+    for _, entry in ipairs(list or {}) do
+      if entry == npc then return true end
+    end
+    return false
+  end
+
+  local function restoreNpc(state, npc)
+    local respawn = npc.tlozRespawn
+    if not respawn then return end
+    npc.cellX = respawn.cellX
+    npc.cellY = respawn.cellY
+    npc.px = respawn.cellX * 16
+    npc.py = respawn.cellY * 16
+    npc.facing = respawn.facing
+    npc.targetX = nil
+    npc.targetY = nil
+    npc.progress = 0
+    npc.moving = false
+    npc.frozen = false
+    npc.tlozDefeated = false
+    npc.tlozGlowFrames = 0
+    npc.tlozRespawn = nil
+    npc.tlozRespawnQueued = nil
+    npc.def.hidden = false
+    if state.tlozCombat and state.tlozCombat.hits then
+      state.tlozCombat.hits[npc.id] = nil
+    end
+    state.npcs = state.npcs or {}
+    state.entities = state.entities or {}
+    if not containsNpc(state.npcs, npc) then state.npcs[#state.npcs + 1] = npc end
+    if not containsNpc(state.entities, npc) then
+      state.entities[#state.entities + 1] = npc
+    end
+  end
+
+  local function updateRespawns(state, dt)
+    local respawns = state.tlozRespawns
+    if not respawns then return end
+    local elapsed = tonumber(dt) or 0
+    if elapsed <= 0 then elapsed = 1 / 60 end
+    for index = #respawns, 1, -1 do
+      local npc = respawns[index]
+      local respawn = npc.tlozRespawn
+      if not respawn then
+        table.remove(respawns, index)
+      else
+        respawn.remaining = respawn.remaining - elapsed
+        if respawn.remaining <= 0 then
+          restoreNpc(state, npc)
+          table.remove(respawns, index)
+        end
+      end
     end
   end
 
@@ -304,9 +375,11 @@ return function(mod)
     local npc = targetAt(state)
     if not npc then return end
     local result = Combat.registerHit(state.tlozCombat, npc.id)
-    local feedback = Feedback.hit(npc, result)
-    play(feedback.audio)
-    if feedback.defeated then removeNpc(state, npc, feedback.particles) end
+    local feedback = Feedback.apply(npc, result, play)
+    if feedback.defeated then
+      removeNpc(state, npc, feedback.particles)
+      purgeNpc(state, npc)
+    end
     action.hit = true
   end
 
@@ -416,22 +489,6 @@ return function(mod)
     for _, npc in ipairs(defeated) do purgeNpc(state, npc) end
   end
 
-  local function drawParticles(state, scale)
-    if not love.graphics or not state.tlozParticles then return end
-    scale = scale or 1
-    local camera = state.camera
-    for _, particle in ipairs(state.tlozParticles) do
-      local alpha = math.min(1, particle.life / 8)
-      local color = particle.color or { 1, 0.05, 0.05 }
-      love.graphics.setColor(color[1], color[2], color[3], alpha)
-      love.graphics.rectangle("fill",
-        math.floor((particle.x - camera.x) * scale),
-        math.floor((particle.y - camera.y) * scale),
-        particle.size * scale, particle.size * scale)
-    end
-    love.graphics.setColor(1, 1, 1, 1)
-  end
-
   local function setLinkSprites(player)
     local link = player.tlozMovementSprite
     if not link then
@@ -465,15 +522,13 @@ return function(mod)
     if not NPC.tlozRecompMania then
       NPC.tlozRecompMania = true
       local npcDraw = NPC.draw
-      NPC.draw = function(npc, ...)
+      NPC.draw = function(npc, camX, camY)
         if npc.tlozGlowFrames and npc.tlozGlowFrames > 0 and love.graphics then
-          local r, g, b, a = love.graphics.getColor()
-          love.graphics.setColor(1, 0.08, 0.08, a)
-          npcDraw(npc, ...)
-          love.graphics.setColor(r, g, b, a)
+          FeedbackRender.drawNpcGlow(npc, npcDraw, camX, camY, PaletteFX,
+            SpriteRenderer)
           return
         end
-        return npcDraw(npc, ...)
+        return npcDraw(npc, camX, camY)
       end
     end
 
@@ -483,6 +538,7 @@ return function(mod)
       OverworldState.update = function(state, dt)
         state.tlozParticles = state.tlozParticles or {}
         state.tlozCombat = state.tlozCombat or Combat.new()
+        updateRespawns(state, dt)
         updateParticles(state)
         updateNpcGlow(state)
         if isGen2 then
@@ -541,7 +597,7 @@ return function(mod)
         end
         writeMember(OverworldState, "drawWorld", function(state, ...)
           local result = drawWorld(state, ...)
-          drawParticles(state)
+          FeedbackRender.drawParticles(state, 1, PaletteFX)
           return result
         end)
       end
@@ -563,7 +619,7 @@ return function(mod)
         Gen2World.draw = function(state, ...)
           local result = draw(state, ...)
           local scale = state.zoomScale and state:zoomScale() or 1
-          drawParticles(state, scale)
+          FeedbackRender.drawParticles(state, scale, PaletteFX)
           return result
         end
       end
