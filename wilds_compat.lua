@@ -41,16 +41,30 @@ function Wilds.exports(mod)
 end
 
 function Wilds.isEntity(entity)
-  return entity and entity.overworldWildSpawn == true
+  return entity and (entity.overworldWildSpawn == true
+    or entity.wildsAmbientPokemon == true)
 end
 
 function Wilds.isBattleable(mod, entity)
-  if not Wilds.isEntity(entity) or entity.tlozDefeated then return false end
+  if not entity or entity.wildsAmbientPokemon == true
+     or entity.tlozDefeated then return false end
   local exports = dependencyExports(mod)
   local checker = exports and exports.isBattleableWild
   if type(checker) ~= "function" then return false end
   local ok, battleable = pcall(checker, entity)
   return ok and battleable == true
+end
+
+function Wilds.isSwordTargetable(mod, entity)
+  if not Wilds.isEntity(entity) or entity.tlozDefeated then return false end
+  if entity.wildsAmbientPokemon == true then
+    return entity.ambientSpecies ~= nil or entity.species ~= nil
+  end
+  return Wilds.isBattleable(mod, entity)
+end
+
+function Wilds.species(entity)
+  return entity and (entity.species or entity.ambientSpecies)
 end
 
 function Wilds.targetId(entity)
@@ -92,6 +106,12 @@ function Wilds.defeat(mod, state, entity)
   entity.canTriggerBattle = false
   entity.state = Wilds.REMOVED_STATE
 
+  local exports = dependencyExports(mod)
+  local ambient = exports and exports.ambient
+  if entity.wildsAmbientPokemon and ambient
+     and type(ambient.removeNpc) == "function" then
+    pcall(ambient.removeNpc, ambient, state, entity)
+  end
   local record, logic, id = Wilds.record(mod, entity)
   if record then record.state = Wilds.REMOVED_STATE end
   local despawned = false

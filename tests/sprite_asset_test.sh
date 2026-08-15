@@ -82,8 +82,8 @@ assert_rgba assets/sprites/environment/pot.png
 
 for color in red green blue purple silver gold; do
   path="assets/sprites/environment/rupee_${color}.png"
-  assert_dimensions "$path" 8x14
-  assert_visible_dimensions "$path" 8x14
+  assert_dimensions "$path" 8x9
+  assert_visible_dimensions "$path" 7x8
   assert_transparent_corner "$path"
   assert_rgba "$path"
 done

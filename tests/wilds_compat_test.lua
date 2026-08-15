@@ -54,6 +54,13 @@ assert(Wilds.isEntity(entity))
 assert(Wilds.isBattleable(mod, entity))
 assert(Wilds.targetId(entity) == "wild:wild-1")
 assert(#Wilds.entities(mod, state) == 1)
+local ambient = {
+  id = "ambient-1",
+  wildsAmbientPokemon = true,
+  ambientSpecies = "EEVEE",
+}
+assert(Wilds.isEntity(ambient))
+assert(Wilds.isSwordTargetable(mod, ambient))
 local foundRecord, foundLogic, foundId = Wilds.record(mod, entity)
 assert(foundRecord == record and foundLogic == logic and foundId == entity.id)
 assert(Wilds.defeat(mod, state, entity))

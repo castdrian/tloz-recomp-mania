@@ -24,6 +24,9 @@ function Hitbox.cells(player)
     { frontX - lateralX, frontY - lateralY },
     { player.cellX + lateralX, player.cellY + lateralY },
     { player.cellX - lateralX, player.cellY - lateralY },
+    { frontX + dx, frontY + dy },
+    { frontX + dx + lateralX, frontY + dy + lateralY },
+    { frontX + dx - lateralX, frontY + dy - lateralY },
   }
 end
 

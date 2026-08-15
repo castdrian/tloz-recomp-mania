@@ -13,6 +13,10 @@ assert(target == front)
 assert(Hitbox.target(player, { upper, behind }) == upper)
 assert(Hitbox.target(player, { side, behind }) == side)
 assert(Hitbox.target(player, { behind }) == nil)
+local farFront = { id = "far-front", cellX = 7, cellY = 5 }
+local farDiagonal = { id = "far-diagonal", cellX = 7, cellY = 4 }
+assert(Hitbox.target(player, { farFront }) == farFront)
+assert(Hitbox.target(player, { farDiagonal }) == farDiagonal)
 local roundabout = Hitbox.roundaboutCells(player)
 assert(#roundabout == 8)
 assert(Hitbox.target(player, { behind }, nil, true) == behind)

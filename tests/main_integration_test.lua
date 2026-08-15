@@ -149,6 +149,12 @@ local wildsExports = {
       and entity.state == "available" and not entity.tlozDefeated
   end,
 }
+local ambientRemoved = false
+wildsExports.ambient = {
+  removeNpc = function()
+    ambientRemoved = true
+  end,
+}
 mod.find = function(first, second)
   local id = second or first
   if id == "overworld_wild_spawns" then return { exports = wildsExports } end
@@ -320,6 +326,49 @@ assert(wildDrop and wildDrop.color == "red",
 assert(wildDrop.value == 200,
   "wild defeat did not use the NPC Pokédollar value")
 assert(#wildState.tlozParticles == 18)
+
+local cityPlayer = {
+  cellX = 0,
+  cellY = 0,
+  facing = "right",
+  moving = false,
+  stepLanded = false,
+  bumpFrames = 0,
+  animClock = 0,
+  stepFlip = false,
+}
+local ambient = {
+  id = "ambient-1",
+  ambientSpecies = "EEVEE",
+  wildsAmbientPokemon = true,
+  cellX = 2,
+  cellY = 0,
+  px = 32,
+  py = 0,
+  def = {},
+}
+local cityState = {
+  player = cityPlayer,
+  npcs = { ambient },
+  entities = { cityPlayer, ambient },
+  camera = { x = 0, y = 0 },
+}
+local cityCryStart = #cries
+local cityVillagerStart = #npcSounds
+local function hitAmbient(ticks)
+  input.pressed.b = true
+  OverworldState.handleInput(cityState)
+  for _ = 1, ticks or 12 do OverworldState.update(cityState, 0) end
+end
+
+hitAmbient()
+hitAmbient()
+hitAmbient(4)
+assert(#cries - cityCryStart == 3)
+assert(cries[cityCryStart + 1] == "EEVEE")
+assert(#npcSounds == cityVillagerStart)
+assert(ambient.tlozDefeated)
+assert(ambientRemoved)
 
 local respawnPlayer = {
   cellX = 0,

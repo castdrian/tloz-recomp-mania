@@ -110,11 +110,12 @@ return function(mod)
 
   local function playWildCry(entity)
     local data = playData or Game.data
-    if not data or not entity or not entity.species
+    local species = Wilds.species(entity)
+    if not data or not species
        or type(Sound.playCry) ~= "function" then
       return nil
     end
-    local ok, source = pcall(Sound.playCry, data, entity.species)
+    local ok, source = pcall(Sound.playCry, data, species)
     if ok then return source end
     return nil
   end
@@ -286,18 +287,19 @@ return function(mod)
 
   local function targetAt(state, roundabout)
     local player = state.player
-    local npc = Hitbox.target(player, state.npcs, function(npc)
-      return npc.def and not npc.def.item and not npc.def.pokemon
-        and not npc.def.trainerClass and not npc.tlozDefeated
-    end, roundabout)
-    if npc then return { kind = "npc", entity = npc, id = npc.id } end
     local wild = Hitbox.target(player, Wilds.entities(mod, state), function(entity)
-      return Wilds.isBattleable(mod, entity)
+      return Wilds.isSwordTargetable(mod, entity)
     end, roundabout)
     if wild then
       local id = Wilds.targetId(wild)
       if id then return { kind = "wild", entity = wild, id = id } end
     end
+    local npc = Hitbox.target(player, state.npcs, function(npc)
+      return not Wilds.isEntity(npc) and npc.def
+        and not npc.def.item and not npc.def.pokemon
+        and not npc.def.trainerClass and not npc.tlozDefeated
+    end, roundabout)
+    if npc then return { kind = "npc", entity = npc, id = npc.id } end
     return nil
   end
 
