@@ -13,7 +13,7 @@
   "priority": 100,
   "permissions": ["engine_internals"],
   "dependencies": [],
-  "optional_dependencies": ["overworld_wild_spawns@^2.1.0"],
+  "optional_dependencies": ["overworld_wild_spawns@^2.1.0", "DRAMALESS_SHAPE@^1.6.0"],
   "conflicts": [],
   "description": "The Legend of Zelda, sort of?"
 }

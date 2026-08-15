@@ -34,6 +34,8 @@ return function(mod)
   local WarpEffects = loadModule(mod, "warp_effects.lua")
   local Environment = loadModule(mod, "environment.lua")
   local Wilds = loadModule(mod, "wilds_compat.lua")
+  local VoxelPlayerModule = loadModule(mod, "voxel_player.lua")
+  local voxelPlayer = VoxelPlayerModule.new(mod)
   local assetPath = function(name)
     return mod.assets:path("assets/" .. name)
   end
@@ -637,6 +639,14 @@ return function(mod)
       or (player.bumpFrames and player.bumpFrames > 0)
     Movement.sync(link.movement, active, player.animClock or 0,
       player.stepFlip)
+    VoxelPlayerModule.mark(voxelPlayer, link, {
+      kind = "movement",
+      moving = active,
+      walkPose = Movement.pose(link.movement),
+      movementClock = player.animClock or 0,
+      clock = voxelPlayer.clock,
+      stepFlip = player.stepFlip,
+    })
     player.sprite = link
     player.surfSprite = link
     player.surfPikachuSprite = link
@@ -647,8 +657,17 @@ return function(mod)
     if not player then return end
     local action = player.tlozAction
     if action then
-      player.sprite = actionSprite(action.kind, action.combo,
+      local sprite = actionSprite(action.kind, action.combo,
         player.facing, action.frame)
+      VoxelPlayerModule.mark(voxelPlayer, sprite, {
+        kind = action.kind,
+        combo = action.combo,
+        frame = action.frame,
+        maxFrame = action.maxFrame,
+        clock = voxelPlayer.clock,
+        stepFlip = player.stepFlip,
+      })
+      player.sprite = sprite
       return
     end
     setLinkSprites(player)
@@ -704,6 +723,7 @@ return function(mod)
         local result = update(state, dt)
         SeamTransition.update(state)
         environment:update(state, dt)
+        voxelPlayer:step()
         applyPlayerVisual(state.player)
         return result
       end
@@ -814,6 +834,7 @@ return function(mod)
       playData = payload.game.data
       environment.game = payload.game
       environment:adoptSave()
+      voxelPlayer:install()
       install(payload.game)
     end
   end)
