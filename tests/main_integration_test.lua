@@ -449,8 +449,8 @@ assert(cries[grassCryStart + 1] == "PIDGEY")
 assert(not grassState.tlozEnvironmentMapState.cutGrass["2:0"])
 
 local respawnPlayer = {
-  cellX = 0,
-  cellY = 0,
+  cellX = 3,
+  cellY = 3,
   facing = "right",
   moving = false,
   stepLanded = false,
@@ -460,11 +460,12 @@ local respawnPlayer = {
 }
 local respawnNpc = {
   id = "respawn-npc",
-  cellX = 1,
-  cellY = 0,
-  px = 16,
-  py = 0,
-  def = {},
+  cellX = 4,
+  cellY = 3,
+  px = 69,
+  py = 55,
+  facing = "up",
+  def = { x = 1, y = 0 },
   pose = function()
     return sprite, 16, 0, "right", 0, false, false
   end,
@@ -487,12 +488,22 @@ hitRespawnNpc(20)
 hitRespawnNpc(14)
 assert(respawnNpc.tlozDefeated, "respawn npc was not defeated")
 assert(not contains(respawnState.npcs, respawnNpc), "respawn npc was not purged")
+assert(respawnNpc.tlozRespawn.cellX == 4)
+assert(respawnNpc.tlozRespawn.cellY == 3)
+assert(respawnNpc.tlozRespawn.px == 69)
+assert(respawnNpc.tlozRespawn.py == 55)
+assert(respawnNpc.tlozRespawn.facing == "up")
 local remainingFrames = math.floor(respawnNpc.tlozRespawn.remaining * 60 + 0.5)
 for _ = 1, remainingFrames - 1 do OverworldState.update(respawnState, 1 / 60) end
 assert(not contains(respawnState.npcs, respawnNpc))
 OverworldState.update(respawnState, 1 / 60)
 assert(contains(respawnState.npcs, respawnNpc))
 assert(not respawnNpc.tlozDefeated)
+assert(respawnNpc.cellX == 4)
+assert(respawnNpc.cellY == 3)
+assert(respawnNpc.px == 69)
+assert(respawnNpc.py == 55)
+assert(respawnNpc.facing == "up")
 
 marks = {}
 npc.tlozGlowFrames = 10

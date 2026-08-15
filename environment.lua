@@ -3,6 +3,7 @@ local Environment = {}
 Environment.GRASS_DROP_CHANCE = 0.5
 Environment.POT_DROP_CHANCE = 0.2
 Environment.NPC_KILL_DROP_CHANCE = 0.1
+Environment.NPC_ITEM_DROP_CHANCE = 0.2
 Environment.POKEDOLLAR_MULTIPLIER = 10
 Environment.MONEY_CAP = 999999
 Environment.RUPEE_VALUES = {
@@ -108,6 +109,50 @@ end
 
 function Environment.rollDrop(random, chance)
   return clampRandom((random or defaultRandom)()) < chance
+end
+
+local function isItemDropCandidate(id, definition)
+  if type(id) ~= "string" or type(definition) ~= "table" then return false end
+  if id == "NO_ITEM" or id == "ITEM_NONE" then return false end
+  if id:match("^FLOOR_") then return false end
+  if definition.keyItem or definition.machine then return false end
+  if id:find("BADGE", 1, true) or id:match("^TM_") or id:match("^HM_") then
+    return false
+  end
+  return type(definition.name) == "string" and definition.name ~= ""
+end
+
+function Environment.buildItemPalette(items)
+  local palette = {}
+  for id, definition in pairs(items or {}) do
+    if isItemDropCandidate(id, definition) then palette[#palette + 1] = id end
+  end
+  table.sort(palette)
+  return palette
+end
+
+function Environment.itemType(random, palette)
+  if type(palette) ~= "table" or #palette == 0 then return nil end
+  local roll = clampRandom((random or defaultRandom)())
+  return palette[math.floor(roll * #palette) + 1]
+end
+
+function Environment.killDropType(random, palette)
+  local roll = clampRandom((random or defaultRandom)())
+  if type(palette) == "table" and #palette > 0 then
+    if roll < Environment.NPC_ITEM_DROP_CHANCE then
+      return "item", Environment.itemType(random, palette)
+    end
+    if roll < Environment.NPC_ITEM_DROP_CHANCE
+         + Environment.NPC_KILL_DROP_CHANCE then
+      return "rupee", "red"
+    end
+    return nil, nil
+  end
+  if roll < Environment.NPC_KILL_DROP_CHANCE then
+    return "rupee", "red"
+  end
+  return nil, nil
 end
 
 function Environment.dropType(random, source)
@@ -251,6 +296,11 @@ function Environment.new(config)
     playSound = config.play,
     palette = config.palette,
     random = config.random or defaultRandom,
+    configuredItemPalette = config.itemPalette,
+    itemPaletteSource = false,
+    itemPaletteCache = nil,
+    itemSprite = config.itemSprite,
+    bag = config.bag,
     stateData = storageState(config.save, config.state),
     images = {},
     activeMapId = nil,
@@ -258,6 +308,18 @@ function Environment.new(config)
     activePots = {},
   }, { __index = Environment })
   return self
+end
+
+function Environment:itemDropPalette()
+  if type(self.configuredItemPalette) == "table" then
+    return self.configuredItemPalette
+  end
+  local items = self.game and self.game.data and self.game.data.items
+  if items ~= self.itemPaletteSource then
+    self.itemPaletteSource = items
+    self.itemPaletteCache = Environment.buildItemPalette(items)
+  end
+  return self.itemPaletteCache or {}
 end
 
 function Environment:saveState()
@@ -406,6 +468,40 @@ function Environment:createRupee(color, x, y)
   return entity
 end
 
+function Environment:createItem(item, x, y)
+  local environment = self
+  local definition = self.game and self.game.data and self.game.data.items
+    and self.game.data.items[item]
+  local entity = {
+    tlozEnvironment = true,
+    tlozEnvironmentType = "item",
+    item = item,
+    name = definition and definition.name or item,
+    cellX = x,
+    cellY = y,
+    px = x * 16,
+    py = y * 16,
+    passable = true,
+  }
+  function entity:draw(camX, camY)
+    if type(environment.itemSprite) == "function" then
+      environment.itemSprite = environment.itemSprite()
+    end
+    if environment.itemSprite and environment.itemSprite.draw then
+      environment.itemSprite:draw(self.px, self.py, camX or 0, camY or 0,
+        "down", 0, false)
+      return
+    end
+    local image = environment:image("item_ball")
+    if not image then return end
+    local width, height = image:getWidth(), image:getHeight()
+    local drawX = math.floor(self.px - (camX or 0) + (16 - width) / 2)
+    local drawY = math.floor(self.py - (camY or 0) + 16 - height)
+    environment:drawImage(image, drawX, drawY)
+  end
+  return entity
+end
+
 function Environment:removeEnvironmentEntities(state)
   for index = #state.entities, 1, -1 do
     if state.entities[index].tlozEnvironment then
@@ -483,7 +579,8 @@ end
 
 function Environment:spawnRupee(state, color, x, y)
   for _, entity in ipairs(state.entities or {}) do
-    if entity.tlozEnvironmentType == "rupee"
+    if (entity.tlozEnvironmentType == "rupee"
+        or entity.tlozEnvironmentType == "item")
        and entity.cellX == x and entity.cellY == y then
       return entity
     end
@@ -494,11 +591,34 @@ function Environment:spawnRupee(state, color, x, y)
   return entity
 end
 
+function Environment:spawnItem(state, item, x, y)
+  for _, entity in ipairs(state.entities or {}) do
+    if (entity.tlozEnvironmentType == "rupee"
+        or entity.tlozEnvironmentType == "item")
+       and entity.cellX == x and entity.cellY == y then
+      return entity
+    end
+  end
+  local entity = self:createItem(item, x, y)
+  state.entities[#state.entities + 1] = entity
+  return entity
+end
+
 function Environment:play(name)
   if self.playSound then self.playSound(name) end
 end
 
 function Environment:drop(state, source, x, y)
+  if source == "npc" or source == "wild" then
+    local kind, value = Environment.killDropType(self.random,
+      self:itemDropPalette())
+    if kind == "item" then
+      self:spawnItem(state, value, x, y)
+    elseif kind == "rupee" then
+      self:spawnRupee(state, value, x, y)
+    end
+    return value
+  end
   local color = Environment.dropType(self.random, source)
   if color then self:spawnRupee(state, color, x, y) end
   return color
@@ -600,6 +720,71 @@ function Environment:collectRupee(state, entity)
   return true
 end
 
+local function showItemText(environment, template, ...)
+  local game = environment.game
+  local stack = game and game.stack
+  if not stack then return false end
+  local TextBox = require("src.render.TextBox")
+  local Strings = require("src.core.Strings")
+  stack:push(TextBox.new(game, Strings(template, ...)))
+  return true
+end
+
+function Environment:collectItem(state, entity, interactive)
+  local save = self.game and self.game.save
+  local bag = self.bag
+  if not bag then
+    local ok, loaded = pcall(require, "src.inventory.Bag")
+    if ok then
+      bag = loaded
+      self.bag = loaded
+    end
+  end
+  if not save or not bag or type(bag.add) ~= "function" then return false end
+  save.inventory = save.inventory or {}
+  if not bag.add(save, entity.item, 1, self.game and self.game.data) then
+    if interactive then showItemText(self, "You can't carry\nany more items!") end
+    return false
+  end
+  entity.collected = true
+  removeEntity(state, entity)
+  if interactive then
+    local data = self.game and self.game.data
+    local definition = data and data.items and data.items[entity.item]
+    if data then
+      local Sound = require("src.core.Sound")
+      Sound.play(data, definition and definition.keyItem
+        and "Get_Key_Item" or "Get_Item1")
+    end
+    local player = save.player
+    local playerName = player and player.name or "PLAYER"
+    local name = definition and definition.name or entity.item
+    showItemText(self, "%s found\n%s!", playerName, name)
+  else
+    self:play("TLOZ_LINK_PICKUP")
+  end
+  return true
+end
+
+function Environment:itemAtFacing(state)
+  local player = state and state.player
+  if not player or type(player.facingCell) ~= "function" then return false end
+  local x, y = player:facingCell()
+  for _, entity in ipairs(state.entities or {}) do
+    if entity.tlozEnvironmentType == "item"
+       and entity.cellX == x and entity.cellY == y then
+      return entity
+    end
+  end
+  return false
+end
+
+function Environment:interact(state)
+  local entity = self:itemAtFacing(state)
+  if not entity then return false end
+  return self:collectItem(state, entity, true)
+end
+
 function Environment:update(state, dt)
   self:ensureMap(state)
   local elapsed = tonumber(dt) or 1 / 60
@@ -619,6 +804,10 @@ function Environment:update(state, dt)
       if not entity.collected and player and self:playerTouches(player, entity) then
         self:collectRupee(state, entity)
       end
+    elseif entity.tlozEnvironmentType == "item"
+       and not entity.collected and player
+       and self:playerTouches(player, entity) then
+      self:collectItem(state, entity)
     end
   end
 end

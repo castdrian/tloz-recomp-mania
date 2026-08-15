@@ -126,6 +126,12 @@ return function(mod)
     game = Game,
     play = play,
     palette = PaletteFX,
+    itemSprite = function()
+      local sprites = Game.data and Game.data.sprites
+      local definition = sprites and sprites.SPRITE_POKE_BALL
+      if not definition then return nil end
+      return SpriteRenderer.new(definition, "tloz-environment-item")
+    end,
   })
 
   local function currentPlayer()
@@ -377,11 +383,15 @@ return function(mod)
     state.tlozRespawns = state.tlozRespawns or {}
     if not npc.tlozRespawnQueued then
       npc.tlozRespawnQueued = true
+      local cellX = tonumber(npc.cellX) or tonumber(npc.def.x) or 0
+      local cellY = tonumber(npc.cellY) or tonumber(npc.def.y) or 0
       npc.tlozRespawn = {
         remaining = Feedback.RESPAWN_SECONDS,
-        cellX = npc.tlozSpawnCellX or npc.def.x or npc.cellX,
-        cellY = npc.tlozSpawnCellY or npc.def.y or npc.cellY,
-        facing = npc.tlozSpawnFacing or npc.facing,
+        cellX = cellX,
+        cellY = cellY,
+        px = tonumber(npc.px) or cellX * 16,
+        py = tonumber(npc.py) or cellY * 16,
+        facing = npc.facing,
       }
       state.tlozRespawns[#state.tlozRespawns + 1] = npc
     end
@@ -399,8 +409,8 @@ return function(mod)
     if not respawn then return end
     npc.cellX = respawn.cellX
     npc.cellY = respawn.cellY
-    npc.px = respawn.cellX * 16
-    npc.py = respawn.cellY * 16
+    npc.px = respawn.px or respawn.cellX * 16
+    npc.py = respawn.py or respawn.cellY * 16
     npc.facing = respawn.facing
     npc.targetX = nil
     npc.targetY = nil
@@ -716,6 +726,12 @@ return function(mod)
             startSword(state)
             return
           end
+          if input:isDown("a") and environment:itemAtFacing(state)
+             and not player.onBike and not player.surfing
+             and not player.fishing then
+            environment:interact(state)
+            return
+          end
           if input:isDown("a") and not hasInteractionTarget(state)
              and not player.onBike and not player.surfing
              and not player.fishing then
@@ -731,6 +747,16 @@ return function(mod)
           FeedbackRender.drawParticles(state, 1, PaletteFX)
           return result
         end)
+      end
+    end
+
+    if type(OverworldState.interact) == "function"
+       and not OverworldState.tlozRecompManiaInteract then
+      OverworldState.tlozRecompManiaInteract = true
+      local interact = OverworldState.interact
+      OverworldState.interact = function(state, ...)
+        if environment:interact(state) then return true end
+        return interact(state, ...)
       end
     end
 

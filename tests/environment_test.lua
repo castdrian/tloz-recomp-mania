@@ -14,6 +14,16 @@ assert(Environment.pokedollarValue("silver") == 1000)
 assert(Environment.pokedollarValue("gold") == 3000)
 assert(Environment.GRASS_DROP_CHANCE == 0.5)
 assert(Environment.NPC_KILL_DROP_CHANCE == 0.1)
+assert(Environment.NPC_ITEM_DROP_CHANCE == 0.2)
+local itemPalette = Environment.buildItemPalette({
+  POTION = { id = "POTION", name = "POTION" },
+  FLOOR_11F = { id = "FLOOR_11F", name = "11F" },
+  MASTER_KEY = { id = "MASTER_KEY", name = "MASTER KEY", keyItem = true },
+  TM_CUT = { id = "TM_CUT", name = "TM01", machine = {} },
+  BADGE_1 = { id = "BADGE_1", name = "BADGE 1" },
+})
+assert(#itemPalette == 1 and itemPalette[1] == "POTION")
+assert(Environment.itemType(function() return 0 end, itemPalette) == "POTION")
 assert(Environment.dropType(function() return 0.6 end, "grass") == nil)
 assert(Environment.dropType(function() return 0.1 end, "grass") == "green")
 assert(Environment.dropType(function()
@@ -160,6 +170,59 @@ player.px, player.py = rupee.px, rupee.py
 environment:update(state, 1 / 60)
 assert(game.save.money == 20)
 assert(sounds[3] == "TLOZ_RUPEE_COLLECT")
+
+local itemInventory = {}
+local itemSounds = {}
+local itemGame = {
+  data = {
+    items = {
+      POTION = { id = "POTION", name = "POTION" },
+      MASTER_KEY = { id = "MASTER_KEY", name = "MASTER KEY", keyItem = true },
+    },
+  },
+  save = { money = 0, inventory = itemInventory },
+}
+local itemEnvironment = Environment.new({
+  game = itemGame,
+  bag = {
+    add = function(saveData, id, quantity)
+      saveData.inventory[id] = (saveData.inventory[id] or 0) + quantity
+      return true
+    end,
+  },
+  random = function() return 0.05 end,
+  play = function(name) itemSounds[#itemSounds + 1] = name end,
+})
+local itemState = { player = player, entities = { player } }
+assert(itemEnvironment:drop(itemState, "npc", 3, 3) == "POTION")
+local itemDrop
+local itemDropCount = 0
+for _, entity in ipairs(itemState.entities) do
+  if entity.tlozEnvironmentType == "item" then
+    itemDrop = entity
+    itemDropCount = itemDropCount + 1
+  end
+  assert(entity.tlozEnvironmentType ~= "rupee")
+end
+assert(itemDrop and itemDropCount == 1)
+player.cellX, player.cellY = itemDrop.cellX, itemDrop.cellY
+itemEnvironment:collectItem(itemState, itemDrop)
+assert(itemInventory.POTION == 1)
+assert(itemSounds[1] == "TLOZ_LINK_PICKUP")
+
+local exclusiveState = { player = player, entities = { player } }
+local exclusiveEnvironment = Environment.new({
+  game = { save = { money = 0 } },
+  itemPalette = { "POTION" },
+  random = function() return 0.25 end,
+})
+assert(exclusiveEnvironment:drop(exclusiveState, "wild", 4, 4) == "red")
+local exclusiveRupee
+for _, entity in ipairs(exclusiveState.entities) do
+  if entity.tlozEnvironmentType == "rupee" then exclusiveRupee = entity end
+  assert(entity.tlozEnvironmentType ~= "item")
+end
+assert(exclusiveRupee and exclusiveRupee.color == "red")
 
 local reachSave = {
   get = function(_, _, default) return default end,
