@@ -210,6 +210,14 @@ itemEnvironment:collectItem(itemState, itemDrop)
 assert(itemInventory.POTION == 1)
 assert(itemSounds[1] == "TLOZ_LINK_PICKUP")
 
+local wildItemState = { player = player, entities = { player } }
+assert(itemEnvironment:drop(wildItemState, "wild", 6, 6) == "POTION")
+local wildItemDrop
+for _, entity in ipairs(wildItemState.entities) do
+  if entity.tlozEnvironmentType == "item" then wildItemDrop = entity end
+end
+assert(wildItemDrop and wildItemDrop.item == "POTION")
+
 local exclusiveState = { player = player, entities = { player } }
 local exclusiveEnvironment = Environment.new({
   game = { save = { money = 0 } },
