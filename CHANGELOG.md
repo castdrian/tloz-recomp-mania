@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0] - 2026-08-15
+
+- Fixed full spin attacks reaching every adjacent cell around Link.
+- Fixed grass cutting when Link is standing on grass.
+- Ensured compact house maps receive multiple pots when valid cells exist.
+- Increased grass rupee drops to one in two cuts.
+
 ## [0.2.0] - 2026-08-15
 
 - Added Zelda-style grass cutting and destructible clay pots in house maps.

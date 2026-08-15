@@ -60,7 +60,7 @@ if ok then
 else
   local manifest = assert(io.open("manifest.json", "r")):read("*a")
   assert(manifest:match('"id"%s*:%s*"tloz%-recomp%-mania"'))
-  assert(manifest:match('"version"%s*:%s*"0%.2%.0"'))
+  assert(manifest:match('"version"%s*:%s*"0%.3%.0"'))
   assert(loadfile("main.lua"))
   print("tloz-recomp-mania standalone load checks passed")
 end
