@@ -404,6 +404,11 @@ return function(mod)
       local feedback = Feedback.apply(npc, result, play)
       if feedback.defeated then
         removeNpc(state, npc, feedback.particles)
+        local dropX = npc.cellX or (npc.def and npc.def.x)
+        local dropY = npc.cellY or (npc.def and npc.def.y)
+        if type(dropX) == "number" and type(dropY) == "number" then
+          environment:drop(state, "npc", dropX, dropY)
+        end
         purgeNpc(state, npc)
       end
       action.hit = true

@@ -68,6 +68,9 @@ local function imageAsset(path)
 end
 
 _G.love = {
+  math = {
+    random = function() return 0 end,
+  },
   graphics = {
     getColor = function() return 1, 1, 1, 1 end,
     setColor = function() end,
@@ -203,6 +206,12 @@ assert(npcSounds[3] == "TLOZ_VILLAGER_DEATH")
 assert(npc.tlozDefeated)
 assert(not contains(state.npcs, npc), "defeated npc remained in npc list")
 assert(not contains(state.entities, npc), "defeated npc remained in entity list")
+local npcDrop
+for _, entity in ipairs(state.entities) do
+  if entity.tlozEnvironmentType == "rupee" then npcDrop = entity end
+end
+assert(npcDrop and npcDrop.color == "red", "defeated npc did not drop a red rupee")
+assert(npcDrop.value == 20, "defeated npc drop was not the highest-value rupee")
 assert(#state.tlozParticles == 18)
 
 local respawnPlayer = {

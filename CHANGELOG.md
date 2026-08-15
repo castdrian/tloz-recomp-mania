@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.1] - 2026-08-15
+
+- Added a 1% chance for defeated NPCs to drop a red rupee.
+
 ## [0.3.0] - 2026-08-15
 
 - Fixed full spin attacks reaching every adjacent cell around Link.

@@ -2,6 +2,7 @@ local Environment = {}
 
 Environment.GRASS_DROP_CHANCE = 0.5
 Environment.POT_DROP_CHANCE = 0.2
+Environment.NPC_KILL_RED_DROP_CHANCE = 0.01
 Environment.MONEY_CAP = 999999
 Environment.RUPEE_VALUES = {
   green = 1,
@@ -98,6 +99,12 @@ function Environment.rollDrop(random, chance)
 end
 
 function Environment.dropType(random, source)
+  if source == "npc" then
+    if Environment.rollDrop(random, Environment.NPC_KILL_RED_DROP_CHANCE) then
+      return "red"
+    end
+    return nil
+  end
   local chance = source == "pot"
     and Environment.POT_DROP_CHANCE or Environment.GRASS_DROP_CHANCE
   if not Environment.rollDrop(random, chance) then return nil end

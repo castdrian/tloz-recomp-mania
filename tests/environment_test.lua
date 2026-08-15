@@ -4,11 +4,14 @@ assert(Environment.rupeeValue("green") == 1)
 assert(Environment.rupeeValue("blue") == 5)
 assert(Environment.rupeeValue("red") == 20)
 assert(Environment.GRASS_DROP_CHANCE == 0.5)
+assert(Environment.NPC_KILL_RED_DROP_CHANCE == 0.01)
 assert(Environment.dropType(function() return 0.6 end, "grass") == nil)
 assert(Environment.dropType(function() return 0.2 end, "grass") == "green")
 assert(Environment.dropType(function()
   return 0.05
 end, "pot") == "green")
+assert(Environment.dropType(function() return 0 end, "npc") == "red")
+assert(Environment.dropType(function() return 0.01 end, "npc") == nil)
 
 local map = {
   id = "TEST_HOUSE",
