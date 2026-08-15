@@ -27,8 +27,24 @@ function Hitbox.cells(player)
   }
 end
 
-function Hitbox.target(player, npcs, valid)
-  for _, cell in ipairs(Hitbox.cells(player)) do
+function Hitbox.roundaboutCells(player)
+  local x, y = player.cellX, player.cellY
+  return {
+    { x - 1, y - 1 },
+    { x, y - 1 },
+    { x + 1, y - 1 },
+    { x - 1, y },
+    { x + 1, y },
+    { x - 1, y + 1 },
+    { x, y + 1 },
+    { x + 1, y + 1 },
+  }
+end
+
+function Hitbox.target(player, npcs, valid, roundabout)
+  local cells = roundabout and Hitbox.roundaboutCells(player)
+    or Hitbox.cells(player)
+  for _, cell in ipairs(cells) do
     for _, npc in ipairs(npcs or {}) do
       if (not valid or valid(npc)) and occupies(npc, cell[1], cell[2]) then
         return npc

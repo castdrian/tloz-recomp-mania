@@ -13,6 +13,9 @@ assert(target == front)
 assert(Hitbox.target(player, { upper, behind }) == upper)
 assert(Hitbox.target(player, { side, behind }) == side)
 assert(Hitbox.target(player, { behind }) == nil)
+local roundabout = Hitbox.roundaboutCells(player)
+assert(#roundabout == 8)
+assert(Hitbox.target(player, { behind }, nil, true) == behind)
 
 local playerForWarp = { cellX = 2, cellY = 3 }
 local doorMap = {

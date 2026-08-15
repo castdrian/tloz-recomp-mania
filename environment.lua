@@ -1,6 +1,6 @@
 local Environment = {}
 
-Environment.GRASS_DROP_CHANCE = 0.25
+Environment.GRASS_DROP_CHANCE = 0.5
 Environment.POT_DROP_CHANCE = 0.2
 Environment.MONEY_CAP = 999999
 Environment.RUPEE_VALUES = {
@@ -169,6 +169,7 @@ function Environment.findPotCells(map, objects, count, random)
     candidates[index], candidates[other] = candidates[other], candidates[index]
   end
   local result = {}
+  local selected = {}
   local desired = math.min(tonumber(count) or Environment.potCount(#candidates),
     #candidates)
   for _, candidate in ipairs(candidates) do
@@ -180,7 +181,20 @@ function Environment.findPotCells(map, objects, count, random)
         break
       end
     end
-    if separated then result[#result + 1] = candidate end
+    if separated then
+      result[#result + 1] = candidate
+      selected[mapCellKey(candidate.x, candidate.y)] = true
+    end
+  end
+  if #result < desired then
+    for _, candidate in ipairs(candidates) do
+      if #result >= desired then break end
+      local key = mapCellKey(candidate.x, candidate.y)
+      if not selected[key] then
+        result[#result + 1] = candidate
+        selected[key] = true
+      end
+    end
   end
   return result
 end
@@ -514,23 +528,21 @@ function Environment:hit(state, options)
   end
   local targets = {}
   local seen = {}
-  for _, cell in ipairs(cells) do
-    local x = cell[1] or cell.x
-    local y = cell[2] or cell.y
-    if type(x) == "number" and type(y) == "number" then
-      local key = mapCellKey(x, y)
-      if not seen[key] then
-        seen[key] = true
-        targets[#targets + 1] = { x, y }
-      end
-    end
+  local function addTarget(x, y)
+    if type(x) ~= "number" or type(y) ~= "number" then return end
+    local key = mapCellKey(x, y)
+    if seen[key] then return end
+    seen[key] = true
+    targets[#targets + 1] = { x, y }
   end
   if options.cutGrass and type(player.cellX) == "number"
      and type(player.cellY) == "number" then
-    local key = mapCellKey(player.cellX, player.cellY)
-    if not seen[key] then
-      targets[#targets + 1] = { player.cellX, player.cellY }
-    end
+    addTarget(player.cellX, player.cellY)
+  end
+  for _, cell in ipairs(cells) do
+    local x = cell[1] or cell.x
+    local y = cell[2] or cell.y
+    addTarget(x, y)
   end
   for _, target in ipairs(targets) do
     if options.breakPots and self:destroyPot(state, target[1], target[2]) then

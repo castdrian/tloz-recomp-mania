@@ -36,15 +36,19 @@ local data = {
     sfx = {
       TLOZ_VILLAGER_HURT_1 = { file = audio("Minecraft_Villager_Hurt_1") },
       TLOZ_VILLAGER_DEATH = { file = audio("Minecraft_Villager_Death") },
+      TLOZ_POT_BREAK = { file = audio("oot/OOT_Pot_Shatter") },
     },
   },
 }
 
 local hurt = Sound.play(data, "TLOZ_VILLAGER_HURT_1")
 local death = Sound.play(data, "TLOZ_VILLAGER_DEATH")
+local pot = Sound.play(data, "TLOZ_POT_BREAK")
 assert(hurt and hurt.played and hurt.volume == 0.8)
 assert(death and death.played and death.volume == 0.8)
+assert(pot and pot.played and pot.volume == 0.8)
 assert(created[1].file:match("Minecraft_Villager_Hurt_1%.wav$"))
 assert(created[2].file:match("Minecraft_Villager_Death%.wav$"))
+assert(created[3].file:match("oot/OOT_Pot_Shatter%.wav$"))
 
 print("tloz-recomp-mania audio runtime tests passed")

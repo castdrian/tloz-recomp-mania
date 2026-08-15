@@ -272,12 +272,12 @@ return function(mod)
     return sprite(name, 1, false, "tloz-action-" .. name)
   end
 
-  local function targetAt(state)
+  local function targetAt(state, roundabout)
     local player = state.player
     return Hitbox.target(player, state.npcs, function(npc)
       return npc.def and not npc.def.item and not npc.def.pokemon
         and not npc.def.trainerClass and not npc.tlozDefeated
-    end)
+    end, roundabout)
   end
 
   local function hasInteractionTarget(state)
@@ -387,16 +387,18 @@ return function(mod)
   end
 
   local function strike(state, action)
+    local roundabout = action.kind == "sword_spin"
     if state.player.facingCell
        and environment:hit(state, {
          breakPots = true,
          cutGrass = true,
-         cells = Hitbox.cells(state.player),
+         cells = roundabout and Hitbox.roundaboutCells(state.player)
+           or Hitbox.cells(state.player),
        }) then
       action.hit = true
       return
     end
-    local npc = targetAt(state)
+    local npc = targetAt(state, roundabout)
     if npc then
       local result = Combat.registerHit(state.tlozCombat, npc.id)
       local feedback = Feedback.apply(npc, result, play)

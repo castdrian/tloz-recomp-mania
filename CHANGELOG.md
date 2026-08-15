@@ -11,7 +11,7 @@
 - Increased house maps to place multiple deterministic pots.
 - Extended sword and hammer reach to the full attack arc, including grass under Link.
 - Migrated existing one-pot house saves to the multi-pot layout.
-- Increased grass rupee drops to one in four cuts.
+- Increased grass rupee drops to one in two cuts.
 
 ## [0.1.0] - 2026-08-12
 

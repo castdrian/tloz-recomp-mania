@@ -354,6 +354,7 @@ function grassMap:warpAtCell() return nil end
 function grassMap:signAtCell() return nil end
 function grassMap:isGrassCell(x, y)
   return (x == 2 and y == 2) or (x == 3 and y == 3)
+    or (x == 3 and y == 4)
 end
 state.map = grassMap
 state.entities = { player }
@@ -381,5 +382,36 @@ input.pressed.b = true
 OverworldState.handleInput(state)
 for _ = 1, 12 do OverworldState.update(state, 1 / 60) end
 assert(state.tlozEnvironmentMapState.cutGrass["3:3"])
+
+local spinMap = {
+  id = "TEST_SPIN_GRASS",
+  def = { id = "TEST_SPIN_GRASS", tileset = "OVERWORLD", width = 4, height = 4,
+    objects = {} },
+  widthCells = 8,
+  heightCells = 8,
+}
+function spinMap:isWalkableCell(x, y)
+  return x > 0 and y > 0 and x < 7 and y < 7
+end
+function spinMap:isCounterCell() return false end
+function spinMap:warpAtCell() return nil end
+function spinMap:signAtCell() return nil end
+function spinMap:isGrassCell(x, y) return x == 1 and y == 1 end
+state.map = spinMap
+state.entities = { player }
+state.npcs = {}
+listeners["map.entered"]({ map = spinMap })
+player.cellX, player.cellY = 2, 2
+player.px, player.py = 32, 32
+player.facing = "right"
+frontX, frontY = 3, 2
+player.tlozAction = {
+  kind = "sword_spin", combo = 4, frame = 3, timer = 0,
+  hit = false, maxFrame = 8, hitFrame = 4,
+}
+OverworldState.update(state, 1 / 60)
+OverworldState.update(state, 1 / 60)
+assert(state.tlozEnvironmentMapState.cutGrass["1:1"],
+  "spin attack did not reach rear diagonal grass")
 
 print("tloz-recomp-mania main integration tests passed")
