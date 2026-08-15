@@ -231,4 +231,28 @@ assert(not environment:cutGrass(state, 2, 2))
 assert(persisted.environment.maps.TEST_HOUSE.cutGrass["2:2"])
 assert(sounds[4] == "TLOZ_GRASS_CUT")
 
+local originalLove = _G.love
+local rupeeDraws = {}
+_G.love = {
+  graphics = {
+    draw = function(image, x, y, rotation, sx, sy)
+      rupeeDraws[#rupeeDraws + 1] = {
+        image = image, x = x, y = y, rotation = rotation, sx = sx, sy = sy,
+      }
+    end,
+  },
+}
+local rupeeImage = {
+  getWidth = function() return 8 end,
+  getHeight = function() return 9 end,
+}
+local drawEnvironment = Environment.new({
+  mod = { assets = { image = function() return rupeeImage end } },
+})
+local visualRupee = drawEnvironment:createRupee("green", 2, 2)
+visualRupee:draw(0, 0)
+assert(#rupeeDraws == 1)
+assert(rupeeDraws[1].sx == 1 and rupeeDraws[1].sy == 1)
+_G.love = originalLove
+
 print("tloz-recomp-mania environment tests passed")
