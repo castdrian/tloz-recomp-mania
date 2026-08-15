@@ -247,8 +247,10 @@ local npcDrop
 for _, entity in ipairs(state.entities) do
   if entity.tlozEnvironmentType == "rupee" then npcDrop = entity end
 end
-assert(npcDrop and npcDrop.color == "red", "defeated npc did not drop a red rupee")
-assert(npcDrop.value == 200, "defeated npc drop did not use the scaled Pokédollar value")
+assert(npcDrop and npcDrop.color == "purple",
+  "defeated npc did not drop a purple rupee")
+assert(npcDrop.value == 500,
+  "defeated npc drop did not use the scaled Pokédollar value")
 assert(#state.tlozParticles == 18)
 
 local wildPlayer = {
@@ -321,9 +323,9 @@ local wildDrop
 for _, entity in ipairs(wildState.entities) do
   if entity.tlozEnvironmentType == "rupee" then wildDrop = entity end
 end
-assert(wildDrop and wildDrop.color == "red",
-  "wild defeat did not use the NPC rupee drop")
-assert(wildDrop.value == 200,
+assert(wildDrop and wildDrop.color == "purple",
+  "wild defeat did not use the high-value rupee drop")
+assert(wildDrop.value == 500,
   "wild defeat did not use the NPC Pokédollar value")
 assert(#wildState.tlozParticles == 18)
 

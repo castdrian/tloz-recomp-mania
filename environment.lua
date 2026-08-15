@@ -2,8 +2,10 @@ local Environment = {}
 
 Environment.GRASS_DROP_CHANCE = 0.5
 Environment.POT_DROP_CHANCE = 0.2
-Environment.NPC_KILL_DROP_CHANCE = 0.1
-Environment.NPC_ITEM_DROP_CHANCE = 0.2
+Environment.NPC_ITEM_DROP_CHANCE = 0.3
+Environment.NPC_PURPLE_RUPEE_CHANCE = 0.1
+Environment.NPC_SILVER_RUPEE_CHANCE = 0.05
+Environment.NPC_GOLD_RUPEE_CHANCE = 0.01
 Environment.POKEDOLLAR_MULTIPLIER = 10
 Environment.MONEY_CAP = 999999
 Environment.RUPEE_VALUES = {
@@ -139,28 +141,31 @@ end
 
 function Environment.killDropType(random, palette)
   local roll = clampRandom((random or defaultRandom)())
+  local cursor = 0
   if type(palette) == "table" and #palette > 0 then
-    if roll < Environment.NPC_ITEM_DROP_CHANCE then
+    if roll < cursor + Environment.NPC_ITEM_DROP_CHANCE then
       return "item", Environment.itemType(random, palette)
     end
-    if roll < Environment.NPC_ITEM_DROP_CHANCE
-         + Environment.NPC_KILL_DROP_CHANCE then
-      return "rupee", "red"
-    end
-    return nil, nil
+    cursor = cursor + Environment.NPC_ITEM_DROP_CHANCE
   end
-  if roll < Environment.NPC_KILL_DROP_CHANCE then
-    return "rupee", "red"
+  if roll < cursor + Environment.NPC_PURPLE_RUPEE_CHANCE then
+    return "rupee", "purple"
+  end
+  cursor = cursor + Environment.NPC_PURPLE_RUPEE_CHANCE
+  if roll < cursor + Environment.NPC_SILVER_RUPEE_CHANCE then
+    return "rupee", "silver"
+  end
+  cursor = cursor + Environment.NPC_SILVER_RUPEE_CHANCE
+  if roll < cursor + Environment.NPC_GOLD_RUPEE_CHANCE then
+    return "rupee", "gold"
   end
   return nil, nil
 end
 
 function Environment.dropType(random, source)
   if source == "npc" or source == "wild" then
-    if Environment.rollDrop(random, Environment.NPC_KILL_DROP_CHANCE) then
-      return "red"
-    end
-    return nil
+    local kind, value = Environment.killDropType(random)
+    return kind == "rupee" and value or nil
   end
   local chance = source == "pot"
     and Environment.POT_DROP_CHANCE or Environment.GRASS_DROP_CHANCE

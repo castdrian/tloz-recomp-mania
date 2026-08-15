@@ -13,8 +13,10 @@ assert(Environment.pokedollarValue("purple") == 500)
 assert(Environment.pokedollarValue("silver") == 1000)
 assert(Environment.pokedollarValue("gold") == 3000)
 assert(Environment.GRASS_DROP_CHANCE == 0.5)
-assert(Environment.NPC_KILL_DROP_CHANCE == 0.1)
-assert(Environment.NPC_ITEM_DROP_CHANCE == 0.2)
+assert(Environment.NPC_ITEM_DROP_CHANCE == 0.3)
+assert(Environment.NPC_PURPLE_RUPEE_CHANCE == 0.1)
+assert(Environment.NPC_SILVER_RUPEE_CHANCE == 0.05)
+assert(Environment.NPC_GOLD_RUPEE_CHANCE == 0.01)
 local itemPalette = Environment.buildItemPalette({
   POTION = { id = "POTION", name = "POTION" },
   FLOOR_11F = { id = "FLOOR_11F", name = "11F" },
@@ -24,15 +26,32 @@ local itemPalette = Environment.buildItemPalette({
 })
 assert(#itemPalette == 1 and itemPalette[1] == "POTION")
 assert(Environment.itemType(function() return 0 end, itemPalette) == "POTION")
+local itemKind, itemValue = Environment.killDropType(function() return 0 end,
+  itemPalette)
+assert(itemKind == "item" and itemValue == "POTION")
+local purpleKind, purpleValue = Environment.killDropType(function() return 0.3 end,
+  itemPalette)
+assert(purpleKind == "rupee" and purpleValue == "purple")
+local silverKind, silverValue = Environment.killDropType(function() return 0.4 end,
+  itemPalette)
+assert(silverKind == "rupee" and silverValue == "silver")
+local goldKind, goldValue = Environment.killDropType(function() return 0.4501 end,
+  itemPalette)
+assert(goldKind == "rupee" and goldValue == "gold")
+assert(Environment.killDropType(function() return 0.4601 end, itemPalette) == nil)
 assert(Environment.dropType(function() return 0.6 end, "grass") == nil)
 assert(Environment.dropType(function() return 0.1 end, "grass") == "green")
 assert(Environment.dropType(function()
   return 0.05
 end, "pot") == "green")
-assert(Environment.dropType(function() return 0 end, "npc") == "red")
-assert(Environment.dropType(function() return 0 end, "wild") == "red")
-assert(Environment.dropType(function() return 0.1 end, "npc") == nil)
-assert(Environment.dropType(function() return 0.1 end, "wild") == nil)
+assert(Environment.dropType(function() return 0 end, "npc") == "purple")
+assert(Environment.dropType(function() return 0 end, "wild") == "purple")
+assert(Environment.dropType(function() return 0.1 end, "npc") == "silver")
+assert(Environment.dropType(function() return 0.1 end, "wild") == "silver")
+assert(Environment.dropType(function() return 0.1501 end, "npc") == "gold")
+assert(Environment.dropType(function() return 0.1501 end, "wild") == "gold")
+assert(Environment.dropType(function() return 0.1601 end, "npc") == nil)
+assert(Environment.dropType(function() return 0.1601 end, "wild") == nil)
 assert(Environment.rupeeType(function() return 0.98 end) == "purple")
 assert(Environment.rupeeType(function() return 0.995 end) == "silver")
 assert(Environment.rupeeType(function() return 0.9995 end) == "gold")
@@ -222,15 +241,15 @@ local exclusiveState = { player = player, entities = { player } }
 local exclusiveEnvironment = Environment.new({
   game = { save = { money = 0 } },
   itemPalette = { "POTION" },
-  random = function() return 0.25 end,
+  random = function() return 0.4001 end,
 })
-assert(exclusiveEnvironment:drop(exclusiveState, "wild", 4, 4) == "red")
+assert(exclusiveEnvironment:drop(exclusiveState, "wild", 4, 4) == "silver")
 local exclusiveRupee
 for _, entity in ipairs(exclusiveState.entities) do
   if entity.tlozEnvironmentType == "rupee" then exclusiveRupee = entity end
   assert(entity.tlozEnvironmentType ~= "item")
 end
-assert(exclusiveRupee and exclusiveRupee.color == "red")
+assert(exclusiveRupee and exclusiveRupee.color == "silver")
 
 local reachSave = {
   get = function(_, _, default) return default end,
