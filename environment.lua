@@ -21,6 +21,7 @@ local EFFECT_FRAMES = {
 
 local EFFECT_FRAME_LENGTH = 3
 local RUPEE_BOB = { 0, -1, -2, -1 }
+local RUPEE_RENDER_SCALE = 7 / 9
 
 local function defaultRandom()
   if love and love.math and love.math.random then
@@ -396,10 +397,11 @@ function Environment:createRupee(color, x, y)
     local image = environment:image("rupee_" .. self.color)
     if not image then return end
     local bob = RUPEE_BOB[math.floor(self.age / 6) % #RUPEE_BOB + 1]
-    local width, height = image:getWidth(), image:getHeight()
+    local width = image:getWidth() * RUPEE_RENDER_SCALE
+    local height = image:getHeight() * RUPEE_RENDER_SCALE
     local x = math.floor(self.px - camX + (16 - width) / 2)
     local y = math.floor(self.py - camY + (16 - height) / 2 + bob)
-    environment:drawImage(image, x, y)
+    environment:drawImage(image, x, y, RUPEE_RENDER_SCALE)
   end
   return entity
 end

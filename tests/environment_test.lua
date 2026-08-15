@@ -243,8 +243,8 @@ _G.love = {
   },
 }
 local rupeeImage = {
-  getWidth = function() return 8 end,
-  getHeight = function() return 9 end,
+  getWidth = function() return 18 end,
+  getHeight = function() return 18 end,
 }
 local drawEnvironment = Environment.new({
   mod = { assets = { image = function() return rupeeImage end } },
@@ -252,7 +252,7 @@ local drawEnvironment = Environment.new({
 local visualRupee = drawEnvironment:createRupee("green", 2, 2)
 visualRupee:draw(0, 0)
 assert(#rupeeDraws == 1)
-assert(rupeeDraws[1].sx == 1 and rupeeDraws[1].sy == 1)
+assert(rupeeDraws[1].sx == 7 / 9 and rupeeDraws[1].sy == 7 / 9)
 _G.love = originalLove
 
 print("tloz-recomp-mania environment tests passed")
