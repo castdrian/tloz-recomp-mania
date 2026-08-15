@@ -12,6 +12,19 @@ assert_dimensions() {
   }
 }
 
+assert_visible_dimensions() {
+  path=$1
+  expected=$2
+  actual=$(/opt/homebrew/bin/magick "$root/$path" -alpha extract \
+    -threshold 0 -format '%@' info:)
+  actual=${actual%%+*}
+  test "$actual" = "$expected" || {
+    printf 'expected visible art in %s to be %s, got %s\n' \
+      "$path" "$expected" "$actual" >&2
+    exit 1
+  }
+}
+
 assert_transparent_corner() {
   path=$1
   pixel=$(/opt/homebrew/bin/identify -format '%[pixel:p{0,0}]' "$root/$path")
@@ -70,6 +83,7 @@ assert_rgba assets/sprites/environment/pot.png
 for color in red green blue purple silver gold; do
   path="assets/sprites/environment/rupee_${color}.png"
   assert_dimensions "$path" 8x14
+  assert_visible_dimensions "$path" 8x14
   assert_transparent_corner "$path"
   assert_rgba "$path"
 done
