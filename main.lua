@@ -30,6 +30,7 @@ return function(mod)
   local Feedback = loadModule(mod, "feedback.lua")
   local FeedbackRender = loadModule(mod, "feedback_render.lua")
   local Hitbox = loadModule(mod, "hitbox.lua")
+  local SeamTransition = loadModule(mod, "seam_transition.lua")
   local WarpEffects = loadModule(mod, "warp_effects.lua")
   local Environment = loadModule(mod, "environment.lua")
   local Wilds = loadModule(mod, "wilds_compat.lua")
@@ -701,9 +702,23 @@ return function(mod)
         end
         updateAction(state)
         local result = update(state, dt)
+        SeamTransition.update(state)
         environment:update(state, dt)
         applyPlayerVisual(state.player)
         return result
+      end
+
+      if not OverworldState.tlozRecompManiaSeam then
+        OverworldState.tlozRecompManiaSeam = true
+        local crossConnection = OverworldState.crossConnection
+        OverworldState.crossConnection = function(state, direction, connection)
+          local result = crossConnection(state, direction, connection)
+          if result then
+            local width, height = game.renderer:worldViewSize()
+            SeamTransition.begin(state, direction, width, height)
+          end
+          return result
+        end
       end
 
       if not isGen2 then
