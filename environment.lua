@@ -115,7 +115,7 @@ end
 
 function Environment.potCount(candidateCount)
   if candidateCount <= 0 then return 0 end
-  return math.min(4, math.max(1, math.floor(candidateCount / 20)))
+  return math.min(4, math.max(2, math.floor(candidateCount / 12)))
 end
 
 function Environment.seedFor(value)

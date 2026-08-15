@@ -6,6 +6,8 @@
 - Added A Link to the Past rupee and clay pot sprites with matching pot-break frames.
 - Added green, blue, and red rupee drops that update the in-game wallet when collected.
 - Added deterministic house pot placement and save-backed destruction state.
+- Added Minish Cap pot-shatter audio when pots are destroyed.
+- Increased house maps to place multiple deterministic pots.
 
 ## [0.1.0] - 2026-08-12
 

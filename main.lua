@@ -152,6 +152,7 @@ return function(mod)
     local result = { image = image, width = image:getWidth(), height = image:getHeight() }
     result.anchorX = anchorX or 0
     result.anchorY = anchorY or 4
+    function result:setObjPalette() end
     function result:draw(px, py, camX, camY, facing, walkPhase, stepFlip)
       local x = math.floor(px - camX) - self.anchorX
       local y = math.floor(py - camY) - self.anchorY
@@ -181,6 +182,7 @@ return function(mod)
   local function movementSprite()
     return {
       movement = Movement.new(),
+      setObjPalette = function() end,
       draw = function(self, px, py, camX, camY, facing)
         local direction = facing
         local pose = Movement.pose(self.movement)

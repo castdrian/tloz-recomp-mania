@@ -54,6 +54,7 @@ for index = 1, #first do
 end
 assert(Environment.isHouseMap(map))
 assert(not Environment.isHouseMap({ id = "POKEMON_MANSION_1F", def = {} }))
+assert(Environment.potCount(36) == 3)
 
 local persisted = {}
 local save = {

@@ -303,6 +303,11 @@ player.cellX, player.cellY = 1, 1
 player.px, player.py = 16, 16
 Game.overworld = state
 listeners["map.entered"]({ map = environmentMap })
+local housePotCount = 0
+for _, entity in ipairs(state.entities) do
+  if entity.tlozEnvironmentType == "pot" then housePotCount = housePotCount + 1 end
+end
+assert(housePotCount >= 2, "house map did not receive multiple pots")
 local pot
 for _, entity in ipairs(state.entities) do
   if entity.tlozEnvironmentType == "pot" then pot = entity end
@@ -313,6 +318,11 @@ input.pressed.b = true
 OverworldState.handleInput(state)
 for _ = 1, 12 do OverworldState.update(state, 1 / 60) end
 assert(not contains(state.entities, pot), "sword did not break the pot")
+local potBreakSounds = 0
+for _, name in ipairs(sounds) do
+  if name == "TLOZ_POT_BREAK" then potBreakSounds = potBreakSounds + 1 end
+end
+assert(potBreakSounds == 1, "pot break did not play its Zelda sound")
 local rupee
 for _, entity in ipairs(state.entities) do
   if entity.tlozEnvironmentType == "rupee" then rupee = entity end
