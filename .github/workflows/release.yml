@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - ".github/**"
+      - "**.md"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Exact version to release"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Determine version
+        id: version
+        env:
+          DISPATCH_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          semver = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+
+          def command(*args):
+              return subprocess.run(args, capture_output=True, text=True, check=True).stdout.strip()
+
+          def parse(value):
+              match = semver.fullmatch(value)
+              return tuple(int(part) for part in match.groups()) if match else None
+
+          with open("manifest.json", encoding="utf-8") as handle:
+              manifest_version = str(json.load(handle).get("version", ""))
+
+          tags = [parse(tag[1:]) for tag in command("git", "tag", "-l", "v*").splitlines()]
+          released = sorted(version for version in tags if version)
+          latest = released[-1] if released else None
+          override = os.environ.get("DISPATCH_VERSION", "").strip()
+          if not override:
+              match = re.search(r"\[release\s+(\d+\.\d+\.\d+)\]", command("git", "log", "-1", "--pretty=%B"))
+              override = match.group(1) if match else ""
+          manifest = parse(manifest_version)
+          if override:
+              version = parse(override)
+              if not version:
+                  raise SystemExit("invalid version override")
+          elif manifest and (latest is None or manifest > latest):
+              version = manifest
+          elif latest:
+              major, minor, patch = latest
+              patch += 1
+              if patch > 99:
+                  minor += 1
+                  patch = 0
+              version = major, minor, patch
+          else:
+              raise SystemExit("manifest.json must contain an X.Y.Z version")
+          text = "%d.%d.%d" % version
+          print("version=" + text)
+          print("tag=v" + text)
+          PY
+      - name: Check release uniqueness
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          test -z "$(git tag -l "$TAG")"
+          ! gh release view "$TAG" >/dev/null 2>&1
+      - name: Build package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/tloz-recomp-mania"
+          out="$GITHUB_WORKSPACE/dist"
+          rm -rf "$staging" "$out"
+          mkdir -p "$staging" "$out"
+          git archive HEAD | tar -x -C "$staging"
+          rm -rf "$staging/.github" "$staging/.git" "$staging/.gitignore"
+          python3 - "$staging/manifest.json" "$VERSION" <<'PY'
+          import json
+          import sys
+          path, version = sys.argv[1:]
+          with open(path, encoding="utf-8") as handle:
+              manifest = json.load(handle)
+          manifest["version"] = version
+          with open(path, "w", encoding="utf-8") as handle:
+              json.dump(manifest, handle, indent=2, ensure_ascii=False)
+              handle.write("\n")
+          PY
+          package="$out/tloz-recomp-mania-${VERSION}.zip"
+          (cd "$staging" && zip -qr "$package" .)
+          unzip -p "$package" manifest.json | python3 -c 'import json,sys; assert json.load(sys.stdin)["version"] == sys.argv[1]' "$VERSION"
+          (cd "$out" && sha256sum "tloz-recomp-mania-${VERSION}.zip" > sha256sums.txt)
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          previous="$(git tag -l 'v*' --sort=-v:refname | grep -v "^${TAG}$" | head -1 || true)"
+          range="${previous:+${previous}..}$GITHUB_SHA"
+          changes="$(git log --no-merges --pretty='- %s' "$range" | head -50 || true)"
+          notes="Install the zip from the gen1recomp mod manager."
+          if [ -n "$changes" ]; then notes="$notes\n\n$changes"; fi
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$VERSION" --notes "$notes" "dist/tloz-recomp-mania-${VERSION}.zip" dist/sha256sums.txt
