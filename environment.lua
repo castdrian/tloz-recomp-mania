@@ -2,12 +2,16 @@ local Environment = {}
 
 Environment.GRASS_DROP_CHANCE = 0.5
 Environment.POT_DROP_CHANCE = 0.2
-Environment.NPC_KILL_RED_DROP_CHANCE = 0.01
+Environment.NPC_KILL_DROP_CHANCE = 0.1
+Environment.POKEDOLLAR_MULTIPLIER = 10
 Environment.MONEY_CAP = 999999
 Environment.RUPEE_VALUES = {
   green = 1,
   blue = 5,
   red = 20,
+  purple = 50,
+  silver = 100,
+  gold = 300,
 }
 
 local EFFECT_FRAMES = {
@@ -87,11 +91,18 @@ function Environment.rupeeValue(color)
   return Environment.RUPEE_VALUES[color] or 0
 end
 
+function Environment.pokedollarValue(color)
+  return Environment.rupeeValue(color) * Environment.POKEDOLLAR_MULTIPLIER
+end
+
 function Environment.rupeeType(random)
   local roll = clampRandom((random or defaultRandom)())
   if roll < 0.7 then return "green" end
-  if roll < 0.95 then return "blue" end
-  return "red"
+  if roll < 0.9 then return "blue" end
+  if roll < 0.97 then return "red" end
+  if roll < 0.99 then return "purple" end
+  if roll < 0.999 then return "silver" end
+  return "gold"
 end
 
 function Environment.rollDrop(random, chance)
@@ -100,7 +111,7 @@ end
 
 function Environment.dropType(random, source)
   if source == "npc" then
-    if Environment.rollDrop(random, Environment.NPC_KILL_RED_DROP_CHANCE) then
+    if Environment.rollDrop(random, Environment.NPC_KILL_DROP_CHANCE) then
       return "red"
     end
     return nil
@@ -373,7 +384,7 @@ function Environment:createRupee(color, x, y)
     tlozEnvironment = true,
     tlozEnvironmentType = "rupee",
     color = color,
-    value = Environment.rupeeValue(color),
+    value = Environment.pokedollarValue(color),
     cellX = x,
     cellY = y,
     px = x * 16,

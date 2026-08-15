@@ -211,7 +211,7 @@ for _, entity in ipairs(state.entities) do
   if entity.tlozEnvironmentType == "rupee" then npcDrop = entity end
 end
 assert(npcDrop and npcDrop.color == "red", "defeated npc did not drop a red rupee")
-assert(npcDrop.value == 20, "defeated npc drop was not the highest-value rupee")
+assert(npcDrop.value == 200, "defeated npc drop did not use the scaled Pokédollar value")
 assert(#state.tlozParticles == 18)
 
 local respawnPlayer = {

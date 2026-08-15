@@ -1,7 +1,7 @@
 id = "tloz-recomp-mania"
 name = "TLoZ: Recomp Mania"
 author = "Adrian"
-version = "0.3.1"
+version = "0.4.0"
 summary = "The Legend of Zelda, sort of?"
 category = "GAMEPLAY"
 profile = "overhaul"

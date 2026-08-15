@@ -1,7 +1,7 @@
 {
   "id": "tloz-recomp-mania",
   "name": "TLoZ: Recomp Mania",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "github": "castdrian/tloz-recomp-mania",
   "api": 2,
   "entry": "main.lua",

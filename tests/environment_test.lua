@@ -3,15 +3,27 @@ local Environment = require("environment")
 assert(Environment.rupeeValue("green") == 1)
 assert(Environment.rupeeValue("blue") == 5)
 assert(Environment.rupeeValue("red") == 20)
+assert(Environment.rupeeValue("purple") == 50)
+assert(Environment.rupeeValue("silver") == 100)
+assert(Environment.rupeeValue("gold") == 300)
+assert(Environment.pokedollarValue("green") == 10)
+assert(Environment.pokedollarValue("blue") == 50)
+assert(Environment.pokedollarValue("red") == 200)
+assert(Environment.pokedollarValue("purple") == 500)
+assert(Environment.pokedollarValue("silver") == 1000)
+assert(Environment.pokedollarValue("gold") == 3000)
 assert(Environment.GRASS_DROP_CHANCE == 0.5)
-assert(Environment.NPC_KILL_RED_DROP_CHANCE == 0.01)
+assert(Environment.NPC_KILL_DROP_CHANCE == 0.1)
 assert(Environment.dropType(function() return 0.6 end, "grass") == nil)
-assert(Environment.dropType(function() return 0.2 end, "grass") == "green")
+assert(Environment.dropType(function() return 0.1 end, "grass") == "green")
 assert(Environment.dropType(function()
   return 0.05
 end, "pot") == "green")
 assert(Environment.dropType(function() return 0 end, "npc") == "red")
-assert(Environment.dropType(function() return 0.01 end, "npc") == nil)
+assert(Environment.dropType(function() return 0.1 end, "npc") == nil)
+assert(Environment.rupeeType(function() return 0.98 end) == "purple")
+assert(Environment.rupeeType(function() return 0.995 end) == "silver")
+assert(Environment.rupeeType(function() return 0.9995 end) == "gold")
 
 local map = {
   id = "TEST_HOUSE",
@@ -137,14 +149,14 @@ local rupee
 for _, entity in ipairs(state.entities) do
   if entity.tlozEnvironmentType == "rupee" then rupee = entity end
 end
-assert(rupee and rupee.value == 1)
+assert(rupee and rupee.value == 10)
 assert(sounds[1] == "TLOZ_POT_BREAK")
 assert(sounds[2] == "TLOZ_RUPEE_DROP")
 
 player.cellX, player.cellY = rupee.cellX, rupee.cellY
 player.px, player.py = rupee.px, rupee.py
 environment:update(state, 1 / 60)
-assert(game.save.money == 11)
+assert(game.save.money == 20)
 assert(sounds[3] == "TLOZ_RUPEE_COLLECT")
 
 local reachSave = {

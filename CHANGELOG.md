@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0] - 2026-08-15
+
+- Replaced rupee sprites with the purchased six-color rupee pack.
+- Added purple, silver, and gold rupee drops worth 50, 100, and 300 rupees.
+- Scaled rupee pickups to ten times their rupee value in Pokédollars.
+- Increased NPC red rupee drop chance to one in ten defeats.
+
 ## [0.3.1] - 2026-08-15
 
 - Added a 1% chance for defeated NPCs to drop a red rupee.
