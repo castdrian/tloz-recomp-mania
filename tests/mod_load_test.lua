@@ -53,8 +53,8 @@ if ok then
     "mc/MC_Rupee_Bounce.wav", "dropped rupee uses Minish Cap audio")
   T.eq(Data.audio.sfx.TLOZ_GRASS_CUT.file:match("mc/MC_Bush%.wav$"),
     "mc/MC_Bush.wav", "cut grass uses Minish Cap audio")
-  T.eq(Data.audio.sfx.TLOZ_POT_BREAK.file:match("mc/MC_Shatter%.wav$"),
-    "mc/MC_Shatter.wav", "broken pot uses Minish Cap audio")
+  T.eq(Data.audio.sfx.TLOZ_POT_BREAK.file:match("oot/OOT_Pot_Shatter%.wav$"),
+    "oot/OOT_Pot_Shatter.wav", "broken pot uses OOT audio")
   run.release()
   T.finish("tloz-recomp-mania")
 else

@@ -7,6 +7,7 @@
 - Added green, blue, and red rupee drops that update the in-game wallet when collected.
 - Added deterministic house pot placement and save-backed destruction state.
 - Added Minish Cap pot-shatter audio when pots are destroyed.
+- Replaced pot destruction audio with the supplied OOT pot-shatter WAV.
 - Increased house maps to place multiple deterministic pots.
 - Extended sword and hammer reach to the full attack arc, including grass under Link.
 - Migrated existing one-pot house saves to the multi-pot layout.

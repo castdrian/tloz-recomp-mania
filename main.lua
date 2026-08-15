@@ -52,7 +52,7 @@ return function(mod)
     { "TLOZ_RUPEE_DROP", "mc/MC_Rupee_Bounce.wav" },
     { "TLOZ_RUPEE_COLLECT", "mc/MC_Rupee.wav" },
     { "TLOZ_GRASS_CUT", "mc/MC_Bush.wav" },
-    { "TLOZ_POT_BREAK", "mc/MC_Shatter.wav" },
+    { "TLOZ_POT_BREAK", "oot/OOT_Pot_Shatter.wav" },
     { "TLOZ_LINK_PUSH", "mc/MC_Link_Push.wav" },
     { "TLOZ_LINK_SHOCK", "mc/MC_Link_Hurt.wav" },
     { "TLOZ_LINK_SHOCK_FAST", "mc/MC_Link_Hurt.wav" },

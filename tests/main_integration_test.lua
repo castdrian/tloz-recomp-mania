@@ -136,7 +136,7 @@ assert(registered.TLOZ_VILLAGER_DEATH.file:match("Minecraft_Villager_Death%.wav$
 assert(registered.TLOZ_RUPEE_DROP.file:match("MC_Rupee_Bounce%.wav$"))
 assert(registered.TLOZ_RUPEE_COLLECT.file:match("MC_Rupee%.wav$"))
 assert(registered.TLOZ_GRASS_CUT.file:match("MC_Bush%.wav$"))
-assert(registered.TLOZ_POT_BREAK.file:match("MC_Shatter%.wav$"))
+assert(registered.TLOZ_POT_BREAK.file:match("OOT_Pot_Shatter%.wav$"))
 
 local frontX, frontY = 1, 0
 local player = {

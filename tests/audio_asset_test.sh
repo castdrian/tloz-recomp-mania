@@ -10,6 +10,11 @@ mean_volume() {
 
 reference=$(mean_volume "$root/assets/audio/mc/MC_Link_Sword1.wav")
 
+test -f "$root/assets/audio/oot/OOT_Pot_Shatter.wav" || {
+  printf '%s\n' 'missing OOT pot shatter audio' >&2
+  exit 1
+}
+
 for name in Minecraft_Villager_Hurt_1 Minecraft_Villager_Hurt_2 \
            Minecraft_Villager_Hurt_3 Minecraft_Villager_Hurt_4 \
            Minecraft_Villager_Death; do
