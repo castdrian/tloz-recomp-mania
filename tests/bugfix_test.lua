@@ -52,4 +52,10 @@ local applied = Feedback.apply(npc, { count = 2, defeated = false },
 assert(applied.audio == "TLOZ_VILLAGER_HURT_2")
 assert(played[1] == "TLOZ_VILLAGER_HURT_2")
 
+local wild = { px = 80, py = 80 }
+local wildFeedback = Feedback.wildHit(wild, { count = 1, defeated = false })
+assert(wildFeedback.audio == nil)
+assert(wildFeedback.particles == nil)
+assert(wild.tlozGlowFrames == Feedback.GLOW_FRAMES)
+
 print("tloz-recomp-mania bugfix tests passed")

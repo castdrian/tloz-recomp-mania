@@ -110,7 +110,7 @@ function Environment.rollDrop(random, chance)
 end
 
 function Environment.dropType(random, source)
-  if source == "npc" then
+  if source == "npc" or source == "wild" then
     if Environment.rollDrop(random, Environment.NPC_KILL_DROP_CHANCE) then
       return "red"
     end

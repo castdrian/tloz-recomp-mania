@@ -1,4 +1,5 @@
 local sounds = {}
+local cries = {}
 local marks = {}
 local draws = {}
 local input = { pressed = {} }
@@ -26,6 +27,10 @@ local Sound = {
     file:close()
     sounds[#sounds + 1] = name
     return { name = name }
+  end,
+  playCry = function(_, species)
+    cries[#cries + 1] = species
+    return { species = species }
   end,
 }
 local PaletteFX = {
@@ -124,6 +129,32 @@ local mod = {
   exports = {},
 }
 
+local wildsLogic = {
+  spawns = {},
+  entities = {},
+  byMap = {},
+  recounted = false,
+}
+function wildsLogic:_despawn(id)
+  self.spawns[id] = nil
+  self.entities[id] = nil
+end
+function wildsLogic:_recountRegions()
+  self.recounted = true
+end
+local wildsExports = {
+  logic = wildsLogic,
+  isBattleableWild = function(entity)
+    return entity.overworldWildSpawn == true
+      and entity.state == "available" and not entity.tlozDefeated
+  end,
+}
+mod.find = function(first, second)
+  local id = second or first
+  if id == "overworld_wild_spawns" then return { exports = wildsExports } end
+  return nil
+end
+
 local factory = assert(loadfile("main.lua"))()
 factory(mod)
 
@@ -213,6 +244,82 @@ end
 assert(npcDrop and npcDrop.color == "red", "defeated npc did not drop a red rupee")
 assert(npcDrop.value == 200, "defeated npc drop did not use the scaled Pokédollar value")
 assert(#state.tlozParticles == 18)
+
+local wildPlayer = {
+  cellX = 0,
+  cellY = 0,
+  facing = "right",
+  moving = false,
+  stepLanded = false,
+  bumpFrames = 0,
+  animClock = 0,
+  stepFlip = false,
+}
+function wildPlayer:facingCell()
+  return 1, 0
+end
+local wild = {
+  id = "wild-1",
+  spawnId = "wild-1",
+  species = "RATTATA",
+  state = "available",
+  overworldWildSpawn = true,
+  cellX = 1,
+  cellY = 0,
+  px = 16,
+  py = 0,
+  pose = function()
+    return sprite, 16, 0, "right", 0, false, false
+  end,
+  draw = function() end,
+}
+wildsLogic.spawns[wild.id] = {
+  id = wild.id,
+  mapId = "PALLET_TOWN",
+  state = "available",
+}
+wildsLogic.entities[wild.id] = wild
+wildsLogic.byMap.PALLET_TOWN = { wild.id }
+local wildState = {
+  player = wildPlayer,
+  npcs = {},
+  entities = { wildPlayer, wild },
+  camera = { x = 0, y = 0 },
+}
+local villagerCountBeforeWild = #npcSounds
+local wildCryStart = #cries
+local function hitWild(ticks)
+  input.pressed.b = true
+  OverworldState.handleInput(wildState)
+  for _ = 1, ticks or 12 do OverworldState.update(wildState, 0) end
+end
+
+hitWild()
+wild.tlozGlowFrames = 1
+draws = {}
+wild:draw(0, 0)
+assert(#draws > 0, "wild hit did not use the NPC glow renderer")
+wild.tlozGlowFrames = 0
+hitWild()
+hitWild(4)
+assert(#cries - wildCryStart == 3, "wild sword hits did not play cries")
+assert(cries[wildCryStart + 1] == "RATTATA")
+assert(#npcSounds == villagerCountBeforeWild,
+  "wild sword hits played Minecraft villager sounds")
+assert(wild.tlozDefeated and wild.wildsDefeated)
+assert(not contains(wildState.entities, wild))
+assert(wildsLogic.entities[wild.id] == nil)
+assert(wildsLogic.spawns[wild.id] == nil)
+assert(wildsLogic.recounted)
+local wildDrop
+for _, entity in ipairs(wildState.entities) do
+  if entity.tlozEnvironmentType == "rupee" then wildDrop = entity end
+end
+assert(wildDrop and wildDrop.color == "red",
+  "wild defeat did not use the NPC rupee drop")
+assert(wildDrop.value == 200,
+  "wild defeat did not use the NPC Pokédollar value")
+assert(#wildState.tlozParticles == 18)
 
 local respawnPlayer = {
   cellX = 0,

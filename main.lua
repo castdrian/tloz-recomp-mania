@@ -32,6 +32,7 @@ return function(mod)
   local Hitbox = loadModule(mod, "hitbox.lua")
   local WarpEffects = loadModule(mod, "warp_effects.lua")
   local Environment = loadModule(mod, "environment.lua")
+  local Wilds = loadModule(mod, "wilds_compat.lua")
   local assetPath = function(name)
     return mod.assets:path("assets/" .. name)
   end
@@ -105,6 +106,17 @@ return function(mod)
       mod.log:warn("audio key %s did not start", name)
     end
     return source
+  end
+
+  local function playWildCry(entity)
+    local data = playData or Game.data
+    if not data or not entity or not entity.species
+       or type(Sound.playCry) ~= "function" then
+      return nil
+    end
+    local ok, source = pcall(Sound.playCry, data, entity.species)
+    if ok then return source end
+    return nil
   end
 
   local environment = Environment.new({
@@ -274,10 +286,19 @@ return function(mod)
 
   local function targetAt(state, roundabout)
     local player = state.player
-    return Hitbox.target(player, state.npcs, function(npc)
+    local npc = Hitbox.target(player, state.npcs, function(npc)
       return npc.def and not npc.def.item and not npc.def.pokemon
         and not npc.def.trainerClass and not npc.tlozDefeated
     end, roundabout)
+    if npc then return { kind = "npc", entity = npc, id = npc.id } end
+    local wild = Hitbox.target(player, Wilds.entities(mod, state), function(entity)
+      return Wilds.isBattleable(mod, entity)
+    end, roundabout)
+    if wild then
+      local id = Wilds.targetId(wild)
+      if id then return { kind = "wild", entity = wild, id = id } end
+    end
+    return nil
   end
 
   local function hasInteractionTarget(state)
@@ -299,6 +320,33 @@ return function(mod)
     state.tlozParticles = state.tlozParticles or {}
     for _, particle in ipairs(particles or {}) do
       state.tlozParticles[#state.tlozParticles + 1] = particle
+    end
+  end
+
+  local function installWildGlow(wild)
+    if wild.tlozWildDrawWrapped then return end
+    if type(wild.draw) ~= "function" then return end
+    local originalDraw = wild.draw
+    wild.tlozWildDrawWrapped = true
+    wild.tlozWildOriginalDraw = originalDraw
+    wild.draw = function(entity, first, second, third)
+      local glowing = (entity.tlozGlowFrames or 0) > 0
+      if glowing and love and love.graphics and entity.pose then
+        if third ~= nil and love.graphics.push and love.graphics.translate
+           and love.graphics.scale and love.graphics.pop then
+          love.graphics.push()
+          love.graphics.translate(first or 0, second or 0)
+          love.graphics.scale(third, third)
+          FeedbackRender.drawNpcGlow(entity, function()
+            originalDraw(entity, 0, 0)
+          end, 0, 0, PaletteFX, SpriteRenderer)
+          love.graphics.pop()
+          return
+        end
+        return FeedbackRender.drawNpcGlow(entity, originalDraw, first or 0,
+          second or 0, PaletteFX, SpriteRenderer)
+      end
+      return originalDraw(entity, first, second, third)
     end
   end
 
@@ -398,18 +446,39 @@ return function(mod)
       action.hit = true
       return
     end
-    local npc = targetAt(state, roundabout)
-    if npc then
-      local result = Combat.registerHit(state.tlozCombat, npc.id)
-      local feedback = Feedback.apply(npc, result, play)
+    local target = targetAt(state, roundabout)
+    if target then
+      local entity = target.entity
+      local result = Combat.registerHit(state.tlozCombat, target.id)
+      local feedback
+      if target.kind == "wild" then
+        installWildGlow(entity)
+        feedback = Feedback.wildHit(entity, result)
+        playWildCry(entity)
+      else
+        feedback = Feedback.apply(entity, result, play)
+      end
       if feedback.defeated then
-        removeNpc(state, npc, feedback.particles)
-        local dropX = npc.cellX or (npc.def and npc.def.x)
-        local dropY = npc.cellY or (npc.def and npc.def.y)
-        if type(dropX) == "number" and type(dropY) == "number" then
-          environment:drop(state, "npc", dropX, dropY)
+        local dropX = entity.cellX or (entity.def and entity.def.x)
+        local dropY = entity.cellY or (entity.def and entity.def.y)
+        if target.kind == "wild" then
+          entity.tlozDefeated = true
+          entity.frozen = true
+        else
+          removeNpc(state, entity, feedback.particles)
         end
-        purgeNpc(state, npc)
+        if target.kind == "wild" then
+          appendParticles(state, feedback.particles)
+        end
+        if type(dropX) == "number" and type(dropY) == "number" then
+          environment:drop(state, target.kind == "wild" and "wild" or "npc",
+            dropX, dropY)
+        end
+        if target.kind == "wild" then
+          Wilds.defeat(mod, state, entity)
+        else
+          purgeNpc(state, entity)
+        end
       end
       action.hit = true
       return
@@ -527,6 +596,12 @@ return function(mod)
     for _, npc in ipairs(defeated) do purgeNpc(state, npc) end
   end
 
+  local function updateWildGlow(state)
+    for _, wild in ipairs(Wilds.entities(mod, state)) do
+      if not wild.tlozDefeated then Feedback.tick(wild) end
+    end
+  end
+
   local function setLinkSprites(player)
     local link = player.tlozMovementSprite
     if not link then
@@ -579,6 +654,7 @@ return function(mod)
         updateRespawns(state, dt)
         updateParticles(state)
         updateNpcGlow(state)
+        updateWildGlow(state)
         environment:ensureMap(state)
         if isGen2 then
           local input = game.input

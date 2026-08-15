@@ -21,6 +21,9 @@ end
 
 function Render.drawNpcGlow(npc, npcDraw, camX, camY, paletteFX, renderer)
   local sprite, px, py, facing, walkPhase, stepFlip = npc:pose()
+  if not sprite or not sprite.def then
+    return npcDraw(npc, camX, camY)
+  end
   local image = sprite.resolveImage and sprite:resolveImage() or sprite.image
   local frame, flip = frameFor(sprite, facing, walkPhase, stepFlip, renderer)
   local quad = sprite.frames and (sprite.frames[frame] or sprite.frames[0])

@@ -44,6 +44,12 @@ function Feedback.apply(npc, result, play)
   return feedback
 end
 
+function Feedback.wildHit(entity, result)
+  local feedback = Feedback.hit(entity, result)
+  feedback.audio = nil
+  return feedback
+end
+
 function Feedback.tick(npc)
   local frames = tonumber(npc.tlozGlowFrames) or 0
   if frames <= 0 then
