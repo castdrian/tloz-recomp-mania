@@ -61,6 +61,16 @@ local ambient = {
 }
 assert(Wilds.isEntity(ambient))
 assert(Wilds.isSwordTargetable(mod, ambient))
+local follower = {
+  id = "follower-1",
+  wildsFollower = true,
+  pokepcMon = { species = "PIKACHU" },
+}
+local followerState = { entities = { follower }, npcs = { follower } }
+assert(Wilds.isFollower(follower))
+assert(Wilds.species(follower) == "PIKACHU")
+assert(#Wilds.followers(followerState) == 1)
+assert(Wilds.followerId(follower) == "follower:follower-1")
 local foundRecord, foundLogic, foundId = Wilds.record(mod, entity)
 assert(foundRecord == record and foundLogic == logic and foundId == entity.id)
 assert(Wilds.defeat(mod, state, entity))

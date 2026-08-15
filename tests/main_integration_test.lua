@@ -371,6 +371,44 @@ assert(#npcSounds == cityVillagerStart)
 assert(ambient.tlozDefeated)
 assert(ambientRemoved)
 
+local followerPlayer = {
+  cellX = 0,
+  cellY = 0,
+  facing = "right",
+  moving = false,
+  stepLanded = false,
+  bumpFrames = 0,
+  animClock = 0,
+  stepFlip = false,
+}
+function followerPlayer:facingCell() return 1, 0 end
+local follower = {
+  id = "follower-1",
+  wildsFollower = true,
+  isFollower = true,
+  pokepcMon = { species = "PIKACHU" },
+  cellX = 1,
+  cellY = 0,
+  px = 16,
+  py = 0,
+  def = { pokemon = true },
+}
+local followerState = {
+  player = followerPlayer,
+  npcs = { follower },
+  entities = { followerPlayer, follower },
+  camera = { x = 0, y = 0 },
+}
+local followerCryStart = #cries
+local followerVillagerStart = #npcSounds
+input.pressed.b = true
+OverworldState.handleInput(followerState)
+for _ = 1, 12 do OverworldState.update(followerState, 0) end
+assert(#cries - followerCryStart == 1)
+assert(cries[followerCryStart + 1] == "PIKACHU")
+assert(#npcSounds == followerVillagerStart)
+assert(not follower.tlozDefeated)
+
 local grassWild = {
   id = "wild-grass-1",
   spawnId = "wild-grass-1",

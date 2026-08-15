@@ -294,6 +294,13 @@ return function(mod)
       local id = Wilds.targetId(wild)
       if id then return { kind = "wild", entity = wild, id = id } end
     end
+    local follower = Hitbox.target(player, Wilds.followers(state), function(entity)
+      return not entity.tlozDefeated and Wilds.species(entity) ~= nil
+    end, roundabout)
+    if follower then
+      local id = Wilds.followerId(follower)
+      if id then return { kind = "follower", entity = follower, id = id } end
+    end
     local npc = Hitbox.target(player, state.npcs, function(npc)
       return not Wilds.isEntity(npc) and npc.def
         and not npc.def.item and not npc.def.pokemon
@@ -441,6 +448,11 @@ return function(mod)
     local target = targetAt(state, roundabout)
     if target then
       local entity = target.entity
+      if target.kind == "follower" then
+        playWildCry(entity)
+        action.hit = true
+        return
+      end
       local result = Combat.registerHit(state.tlozCombat, target.id)
       local feedback
       if target.kind == "wild" then

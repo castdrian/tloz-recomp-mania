@@ -45,6 +45,30 @@ function Wilds.isEntity(entity)
     or entity.wildsAmbientPokemon == true)
 end
 
+function Wilds.isFollower(entity)
+  if not entity or entity.pokepcTrailerKind == "trainer" then return false end
+  return entity.wildsFollower == true
+    or entity.isFollower == true
+    or entity.follower == true
+    or entity.pikachuFollower == true
+    or entity.pokepcTrailer == true
+end
+
+function Wilds.followers(state)
+  local result = {}
+  local seen = {}
+  local function add(entity)
+    if Wilds.isFollower(entity) and not seen[entity] then
+      seen[entity] = true
+      result[#result + 1] = entity
+    end
+  end
+  for _, entity in ipairs(state and state.entities or {}) do add(entity) end
+  for _, entity in ipairs(state and state.npcs or {}) do add(entity) end
+  for _, entity in ipairs(state and state.pokepcTrailers or {}) do add(entity) end
+  return result
+end
+
 function Wilds.isBattleable(mod, entity)
   if not entity or entity.wildsAmbientPokemon == true
      or entity.tlozDefeated then return false end
@@ -64,7 +88,17 @@ function Wilds.isSwordTargetable(mod, entity)
 end
 
 function Wilds.species(entity)
-  return entity and (entity.species or entity.ambientSpecies)
+  if not entity then return nil end
+  local mon = entity.pokepcMon
+  return entity.species or entity.ambientSpecies or entity._wildsFollowerSpecies
+    or (mon and mon.species)
+    or (entity.pikachuFollower and "PIKACHU" or nil)
+end
+
+function Wilds.followerId(entity)
+  local id = entity and (entity.pokepcTrailerId or entity.spawnId or entity.id)
+  if id == nil then return nil end
+  return "follower:" .. tostring(id)
 end
 
 function Wilds.targetId(entity)
