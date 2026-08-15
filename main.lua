@@ -385,6 +385,11 @@ return function(mod)
   end
 
   local function strike(state, action)
+    if state.player.facingCell
+       and environment:hit(state, { breakPots = true, cutGrass = true }) then
+      action.hit = true
+      return
+    end
     local npc = targetAt(state)
     if npc then
       local result = Combat.registerHit(state.tlozCombat, npc.id)
@@ -395,9 +400,6 @@ return function(mod)
       end
       action.hit = true
       return
-    end
-    if environment:hit(state, { breakPots = true, cutGrass = true }) then
-      action.hit = true
     end
   end
 

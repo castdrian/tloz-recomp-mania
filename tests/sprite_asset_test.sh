@@ -69,7 +69,7 @@ assert_rgba assets/sprites/environment/pot.png
 
 for color in red green blue; do
   path="assets/sprites/environment/rupee_${color}.png"
-  assert_dimensions "$path" 8x9
+  assert_dimensions "$path" 8x14
   assert_transparent_corner "$path"
   assert_rgba "$path"
 done
@@ -91,6 +91,7 @@ for path in assets/sprites/environment/pot_fx_1.png \
             assets/sprites/environment/pot_fx_4.png \
             assets/sprites/environment/pot_fx_5.png \
             assets/sprites/environment/pot_fx_6.png; do
+  assert_dimensions "$path" 31x31
   assert_transparent_corner "$path"
   assert_rgba "$path"
 done

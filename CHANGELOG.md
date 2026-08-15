@@ -3,7 +3,7 @@
 ## [0.2.0] - 2026-08-15
 
 - Added Zelda-style grass cutting and destructible clay pots in house maps.
-- Added Minish Cap rupee sprites, grass and pot destruction effects, and matching Minish Cap sounds.
+- Added A Link to the Past rupee and clay pot sprites with matching pot-break frames.
 - Added green, blue, and red rupee drops that update the in-game wallet when collected.
 - Added deterministic house pot placement and save-backed destruction state.
 

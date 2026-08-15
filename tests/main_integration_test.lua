@@ -328,9 +328,20 @@ frontX, frontY = 2, 2
 player.cellX, player.cellY = 1, 2
 player.px, player.py = 16, 32
 player.tlozAction = nil
+local sideNpc = {
+  id = "side-grass-npc",
+  cellX = 2,
+  cellY = 3,
+  targetX = nil,
+  targetY = nil,
+  def = {},
+}
+state.npcs = { sideNpc }
+state.entities = { player, sideNpc }
 input.pressed.b = true
 OverworldState.handleInput(state)
 for _ = 1, 12 do OverworldState.update(state, 1 / 60) end
 assert(state.tlozEnvironmentMapState.cutGrass["2:2"])
+assert(not sideNpc.tlozDefeated)
 
 print("tloz-recomp-mania main integration tests passed")
