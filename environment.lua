@@ -1,6 +1,6 @@
 local Environment = {}
 
-Environment.GRASS_DROP_CHANCE = 0.1
+Environment.GRASS_DROP_CHANCE = 0.25
 Environment.POT_DROP_CHANCE = 0.2
 Environment.MONEY_CAP = 999999
 Environment.RUPEE_VALUES = {
@@ -388,17 +388,29 @@ function Environment:enterMap(state, map)
   self.activePots = {}
   self:applySavedGrass(map, self.activeMapState)
   if Environment.isHouseMap(map) then
-    if not self.activeMapState.potsInitialized then
-      local random = Environment.randomFor(Environment.seedFor(self.activeMapId))
-      local candidates = Environment.findPotCells(map, state.npcs,
-        nil, random)
-      for _, cell in ipairs(candidates) do
+    local random = Environment.randomFor(Environment.seedFor(self.activeMapId))
+    local candidates = Environment.findPotCells(map, state.npcs, nil, random)
+    local potCells = {}
+    for _, pot in ipairs(self.activeMapState.pots) do
+      if type(pot.x) == "number" and type(pot.y) == "number" then
+        potCells[mapCellKey(pot.x, pot.y)] = true
+      end
+    end
+    local potsChanged = not self.activeMapState.potsInitialized
+    for _, cell in ipairs(candidates) do
+      if #self.activeMapState.pots >= #candidates then break end
+      local key = mapCellKey(cell.x, cell.y)
+      if not potCells[key] then
         self.activeMapState.pots[#self.activeMapState.pots + 1] = {
           x = cell.x,
           y = cell.y,
           destroyed = false,
         }
+        potCells[key] = true
+        potsChanged = true
       end
+    end
+    if potsChanged then
       self.activeMapState.potsInitialized = true
       self:saveState()
     end
@@ -495,9 +507,39 @@ function Environment:hit(state, options)
   options = options or {}
   local player = state and state.player
   if not player then return false end
-  local x, y = player:facingCell()
-  if options.breakPots and self:destroyPot(state, x, y) then return true end
-  if options.cutGrass and self:cutGrass(state, x, y) then return true end
+  local cells = options.cells
+  if type(cells) ~= "table" or #cells == 0 then
+    local x, y = player:facingCell()
+    cells = { { x, y } }
+  end
+  local targets = {}
+  local seen = {}
+  for _, cell in ipairs(cells) do
+    local x = cell[1] or cell.x
+    local y = cell[2] or cell.y
+    if type(x) == "number" and type(y) == "number" then
+      local key = mapCellKey(x, y)
+      if not seen[key] then
+        seen[key] = true
+        targets[#targets + 1] = { x, y }
+      end
+    end
+  end
+  if options.cutGrass and type(player.cellX) == "number"
+     and type(player.cellY) == "number" then
+    local key = mapCellKey(player.cellX, player.cellY)
+    if not seen[key] then
+      targets[#targets + 1] = { player.cellX, player.cellY }
+    end
+  end
+  for _, target in ipairs(targets) do
+    if options.breakPots and self:destroyPot(state, target[1], target[2]) then
+      return true
+    end
+    if options.cutGrass and self:cutGrass(state, target[1], target[2]) then
+      return true
+    end
+  end
   return false
 end
 

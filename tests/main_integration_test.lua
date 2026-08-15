@@ -293,7 +293,9 @@ end
 function environmentMap:isCounterCell() return false end
 function environmentMap:warpAtCell() return nil end
 function environmentMap:signAtCell() return nil end
-function environmentMap:isGrassCell(x, y) return x == 2 and y == 2 end
+function environmentMap:isGrassCell(x, y)
+  return (x == 2 and y == 2) or (x == 3 and y == 3)
+end
 
 state.map = environmentMap
 state.npcs = {}
@@ -314,6 +316,9 @@ for _, entity in ipairs(state.entities) do
 end
 assert(pot, "house map did not receive a pot")
 frontX, frontY = pot.cellX, pot.cellY
+player.cellX, player.cellY = pot.cellX - 1, pot.cellY
+player.px, player.py = player.cellX * 16, player.cellY * 16
+player.facing = "right"
 input.pressed.b = true
 OverworldState.handleInput(state)
 for _ = 1, 12 do OverworldState.update(state, 1 / 60) end
@@ -334,24 +339,47 @@ if rupee then
   assert(game.save.money > 10, "rupee did not update the wallet")
 end
 
-frontX, frontY = 2, 2
+local grassMap = {
+  id = "TEST_GRASS",
+  def = { id = "TEST_GRASS", tileset = "OVERWORLD", width = 4, height = 4,
+    objects = {} },
+  widthCells = 8,
+  heightCells = 8,
+}
+function grassMap:isWalkableCell(x, y)
+  return x > 0 and y > 0 and x < 7 and y < 7
+end
+function grassMap:isCounterCell() return false end
+function grassMap:warpAtCell() return nil end
+function grassMap:signAtCell() return nil end
+function grassMap:isGrassCell(x, y)
+  return (x == 2 and y == 2) or (x == 3 and y == 3)
+end
+state.map = grassMap
+state.entities = { player }
+state.npcs = {}
+listeners["map.entered"]({ map = grassMap })
+
+frontX, frontY = 1, 1
 player.cellX, player.cellY = 1, 2
 player.px, player.py = 16, 32
+player.facing = "up"
 player.tlozAction = nil
-local sideNpc = {
-  id = "side-grass-npc",
-  cellX = 2,
-  cellY = 3,
-  targetX = nil,
-  targetY = nil,
-  def = {},
-}
-state.npcs = { sideNpc }
-state.entities = { player, sideNpc }
+state.npcs = {}
+state.entities = { player }
 input.pressed.b = true
 OverworldState.handleInput(state)
 for _ = 1, 12 do OverworldState.update(state, 1 / 60) end
 assert(state.tlozEnvironmentMapState.cutGrass["2:2"])
-assert(not sideNpc.tlozDefeated)
+
+frontX, frontY = 3, 4
+player.cellX, player.cellY = 3, 3
+player.px, player.py = 48, 48
+player.facing = "down"
+player.tlozAction = nil
+input.pressed.b = true
+OverworldState.handleInput(state)
+for _ = 1, 12 do OverworldState.update(state, 1 / 60) end
+assert(state.tlozEnvironmentMapState.cutGrass["3:3"])
 
 print("tloz-recomp-mania main integration tests passed")

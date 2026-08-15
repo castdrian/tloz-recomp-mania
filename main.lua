@@ -388,7 +388,11 @@ return function(mod)
 
   local function strike(state, action)
     if state.player.facingCell
-       and environment:hit(state, { breakPots = true, cutGrass = true }) then
+       and environment:hit(state, {
+         breakPots = true,
+         cutGrass = true,
+         cells = Hitbox.cells(state.player),
+       }) then
       action.hit = true
       return
     end
@@ -488,6 +492,7 @@ return function(mod)
         environment:hit(state, {
           breakPots = action.combo == "hammer" or action.combo == "bomb",
           cutGrass = action.combo == "hammer",
+          cells = Hitbox.cells(state.player),
         })
         action.hit = true
       else
