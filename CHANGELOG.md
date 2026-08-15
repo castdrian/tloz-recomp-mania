@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0] - 2026-08-15
+
+- Added Zelda-style grass cutting and destructible clay pots in house maps.
+- Added Minish Cap rupee sprites, grass and pot destruction effects, and matching Minish Cap sounds.
+- Added green, blue, and red rupee drops that update the in-game wallet when collected.
+- Added deterministic house pot placement and save-backed destruction state.
+
 ## [0.1.0] - 2026-08-12
 
 - Added Link player art from the supplied Link's Awakening DX sprite sheet.

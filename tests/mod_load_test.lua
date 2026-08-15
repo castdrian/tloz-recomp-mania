@@ -9,6 +9,9 @@ if ok then
   T.check(Data.audio.sfx.TLOZ_SWORD_1 ~= nil, "sword audio registered")
   T.check(Data.audio.sfx.TLOZ_ARROW_SHOOT ~= nil, "bow audio registered")
   T.check(Data.audio.sfx.TLOZ_BOMB_DROP ~= nil, "bomb audio registered")
+  T.check(Data.audio.sfx.TLOZ_RUPEE_DROP ~= nil, "rupee drop audio registered")
+  T.check(Data.audio.sfx.TLOZ_GRASS_CUT ~= nil, "grass cut audio registered")
+  T.check(Data.audio.sfx.TLOZ_POT_BREAK ~= nil, "pot break audio registered")
   T.check(Data.audio.sfx.TLOZ_VILLAGER_DEATH ~= nil, "villager death audio registered")
   local audio = {
     "TLOZ_LINK_DASH", "TLOZ_LINK_DYING", "TLOZ_LINK_FALL",
@@ -25,6 +28,8 @@ if ok then
     "TLOZ_HAMMER_POST", "TLOZ_SHOVEL", "TLOZ_MAGIC_POWDER",
     "TLOZ_FIRE_ROD", "TLOZ_ICE_ROD", "TLOZ_LAMP", "TLOZ_CANE",
     "TLOZ_CANE_MAGIC", "TLOZ_BOMB_DROP", "TLOZ_BOMB_BLOW",
+    "TLOZ_RUPEE_DROP", "TLOZ_RUPEE_COLLECT", "TLOZ_GRASS_CUT",
+    "TLOZ_POT_BREAK",
     "TLOZ_VILLAGER_HURT_1", "TLOZ_VILLAGER_HURT_2",
     "TLOZ_VILLAGER_HURT_3", "TLOZ_VILLAGER_HURT_4",
     "TLOZ_VILLAGER_DEATH",
@@ -44,12 +49,18 @@ if ok then
     "mc/MC_Link_Sword3.wav", "third Link voice uses Minish Cap audio")
   T.eq(Data.audio.sfx.TLOZ_SWORD_1.file:match("mc/MC_Link_Sword%.wav$"),
     "mc/MC_Link_Sword.wav", "sword swing uses Minish Cap audio")
+  T.eq(Data.audio.sfx.TLOZ_RUPEE_DROP.file:match("mc/MC_Rupee_Bounce%.wav$"),
+    "mc/MC_Rupee_Bounce.wav", "dropped rupee uses Minish Cap audio")
+  T.eq(Data.audio.sfx.TLOZ_GRASS_CUT.file:match("mc/MC_Bush%.wav$"),
+    "mc/MC_Bush.wav", "cut grass uses Minish Cap audio")
+  T.eq(Data.audio.sfx.TLOZ_POT_BREAK.file:match("mc/MC_Shatter%.wav$"),
+    "mc/MC_Shatter.wav", "broken pot uses Minish Cap audio")
   run.release()
   T.finish("tloz-recomp-mania")
 else
   local manifest = assert(io.open("manifest.json", "r")):read("*a")
   assert(manifest:match('"id"%s*:%s*"tloz%-recomp%-mania"'))
-  assert(manifest:match('"version"%s*:%s*"0%.1%.0"'))
+  assert(manifest:match('"version"%s*:%s*"0%.2%.0"'))
   assert(loadfile("main.lua"))
   print("tloz-recomp-mania standalone load checks passed")
 end

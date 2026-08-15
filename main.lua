@@ -31,6 +31,7 @@ return function(mod)
   local FeedbackRender = loadModule(mod, "feedback_render.lua")
   local Hitbox = loadModule(mod, "hitbox.lua")
   local WarpEffects = loadModule(mod, "warp_effects.lua")
+  local Environment = loadModule(mod, "environment.lua")
   local assetPath = function(name)
     return mod.assets:path("assets/" .. name)
   end
@@ -48,6 +49,10 @@ return function(mod)
     { "TLOZ_LINK_JUMP", "mc/MC_Link_Jump.wav" },
     { "TLOZ_LINK_LAND", "mc/MC_Link_Run.wav" },
     { "TLOZ_LINK_PICKUP", "mc/MC_Rupee.wav" },
+    { "TLOZ_RUPEE_DROP", "mc/MC_Rupee_Bounce.wav" },
+    { "TLOZ_RUPEE_COLLECT", "mc/MC_Rupee.wav" },
+    { "TLOZ_GRASS_CUT", "mc/MC_Bush.wav" },
+    { "TLOZ_POT_BREAK", "mc/MC_Shatter.wav" },
     { "TLOZ_LINK_PUSH", "mc/MC_Link_Push.wav" },
     { "TLOZ_LINK_SHOCK", "mc/MC_Link_Hurt.wav" },
     { "TLOZ_LINK_SHOCK_FAST", "mc/MC_Link_Hurt.wav" },
@@ -101,6 +106,14 @@ return function(mod)
     end
     return source
   end
+
+  local environment = Environment.new({
+    mod = mod,
+    save = mod.save,
+    game = Game,
+    play = play,
+    palette = PaletteFX,
+  })
 
   local function currentPlayer()
     local world = Game.world or Game.overworld
@@ -373,14 +386,19 @@ return function(mod)
 
   local function strike(state, action)
     local npc = targetAt(state)
-    if not npc then return end
-    local result = Combat.registerHit(state.tlozCombat, npc.id)
-    local feedback = Feedback.apply(npc, result, play)
-    if feedback.defeated then
-      removeNpc(state, npc, feedback.particles)
-      purgeNpc(state, npc)
+    if npc then
+      local result = Combat.registerHit(state.tlozCombat, npc.id)
+      local feedback = Feedback.apply(npc, result, play)
+      if feedback.defeated then
+        removeNpc(state, npc, feedback.particles)
+        purgeNpc(state, npc)
+      end
+      action.hit = true
+      return
     end
-    action.hit = true
+    if environment:hit(state, { breakPots = true, cutGrass = true }) then
+      action.hit = true
+    end
   end
 
   local function startSword(state)
@@ -463,6 +481,10 @@ return function(mod)
     if action.frame == action.hitFrame and not action.hit then
       if action.kind == "tool" then
         if action.combo ~= "bomb" then play(action.hitAudio) end
+        environment:hit(state, {
+          breakPots = action.combo == "hammer" or action.combo == "bomb",
+          cutGrass = action.combo == "hammer",
+        })
         action.hit = true
       else
         strike(state, action)
@@ -541,6 +563,7 @@ return function(mod)
         updateRespawns(state, dt)
         updateParticles(state)
         updateNpcGlow(state)
+        environment:ensureMap(state)
         if isGen2 then
           local input = game.input
           local player = state.player
@@ -562,6 +585,7 @@ return function(mod)
         end
         updateAction(state)
         local result = update(state, dt)
+        environment:update(state, dt)
         applyPlayerVisual(state.player)
         return result
       end
@@ -597,6 +621,7 @@ return function(mod)
         end
         writeMember(OverworldState, "drawWorld", function(state, ...)
           local result = drawWorld(state, ...)
+          environment:draw(state, 1)
           FeedbackRender.drawParticles(state, 1, PaletteFX)
           return result
         end)
@@ -619,6 +644,7 @@ return function(mod)
         Gen2World.draw = function(state, ...)
           local result = draw(state, ...)
           local scale = state.zoomScale and state:zoomScale() or 1
+          environment:draw(state, scale)
           FeedbackRender.drawParticles(state, scale, PaletteFX)
           return result
         end
@@ -639,7 +665,21 @@ return function(mod)
   mod.events:on("game.ready", function(payload)
     if payload and payload.game then
       playData = payload.game.data
+      environment.game = payload.game
+      environment:adoptSave()
       install(payload.game)
+    end
+  end)
+  mod.events:on("save.created", function()
+    environment:adoptSave()
+  end)
+  mod.events:on("save.loaded", function()
+    environment:adoptSave()
+  end)
+  mod.events:on("map.entered", function(payload)
+    local world = Game.world or Game.overworld
+    if world and payload and payload.map then
+      environment:enterMap(world, payload.map)
     end
   end)
   local previousStep

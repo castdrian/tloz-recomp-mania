@@ -63,9 +63,44 @@ for path in \
   assert_transparent_corner "$path"
 done
 
+assert_dimensions assets/sprites/environment/pot.png 16x16
+assert_transparent_corner assets/sprites/environment/pot.png
+assert_rgba assets/sprites/environment/pot.png
+
+for color in red green blue; do
+  path="assets/sprites/environment/rupee_${color}.png"
+  assert_dimensions "$path" 8x9
+  assert_transparent_corner "$path"
+  assert_rgba "$path"
+done
+
+for path in assets/sprites/environment/grass_fx_1.png \
+            assets/sprites/environment/grass_fx_2.png \
+            assets/sprites/environment/grass_fx_3.png \
+            assets/sprites/environment/grass_fx_4.png \
+            assets/sprites/environment/grass_fx_5.png \
+            assets/sprites/environment/grass_fx_6.png; do
+  assert_dimensions "$path" 16x16
+  assert_transparent_corner "$path"
+  assert_rgba "$path"
+done
+
+for path in assets/sprites/environment/pot_fx_1.png \
+            assets/sprites/environment/pot_fx_2.png \
+            assets/sprites/environment/pot_fx_3.png \
+            assets/sprites/environment/pot_fx_4.png \
+            assets/sprites/environment/pot_fx_5.png \
+            assets/sprites/environment/pot_fx_6.png; do
+  assert_transparent_corner "$path"
+  assert_rgba "$path"
+done
+
 /opt/homebrew/bin/rg -q 'Minecraft_Villager_Hurt_1\.wav' "$root/main.lua"
 /opt/homebrew/bin/rg -q 'Minecraft_Villager_Hurt_4\.wav' "$root/main.lua"
 /opt/homebrew/bin/rg -q 'Minecraft_Villager_Death\.wav' "$root/main.lua"
+/opt/homebrew/bin/rg -q 'TLOZ_RUPEE_DROP' "$root/main.lua"
+/opt/homebrew/bin/rg -q 'TLOZ_GRASS_CUT' "$root/main.lua"
+/opt/homebrew/bin/rg -q 'TLOZ_POT_BREAK' "$root/main.lua"
 /opt/homebrew/bin/rg -q 'PaletteFX\.markSpriteRedraw' "$root/main.lua"
 /opt/homebrew/bin/rg -q 'assetFacing = facing' "$root/main.lua"
 

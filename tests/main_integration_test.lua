@@ -124,7 +124,8 @@ local mod = {
 local factory = assert(loadfile("main.lua"))()
 factory(mod)
 
-local game = { data = Game.data, input = input, world = nil }
+local game = { data = Game.data, input = input, world = nil,
+  save = { money = 10 } }
 listeners["game.ready"]({ game = game })
 
 assert(registered.TLOZ_VILLAGER_HURT_1.file:match("Minecraft_Villager_Hurt_1%.wav$"))
@@ -132,7 +133,12 @@ assert(registered.TLOZ_VILLAGER_HURT_2.file:match("Minecraft_Villager_Hurt_2%.wa
 assert(registered.TLOZ_VILLAGER_HURT_3.file:match("Minecraft_Villager_Hurt_3%.wav$"))
 assert(registered.TLOZ_VILLAGER_HURT_4.file:match("Minecraft_Villager_Hurt_4%.wav$"))
 assert(registered.TLOZ_VILLAGER_DEATH.file:match("Minecraft_Villager_Death%.wav$"))
+assert(registered.TLOZ_RUPEE_DROP.file:match("MC_Rupee_Bounce%.wav$"))
+assert(registered.TLOZ_RUPEE_COLLECT.file:match("MC_Rupee%.wav$"))
+assert(registered.TLOZ_GRASS_CUT.file:match("MC_Bush%.wav$"))
+assert(registered.TLOZ_POT_BREAK.file:match("MC_Shatter%.wav$"))
 
+local frontX, frontY = 1, 0
 local player = {
   cellX = 0,
   cellY = 0,
@@ -143,6 +149,9 @@ local player = {
   animClock = 0,
   stepFlip = false,
 }
+function player:facingCell()
+  return frontX, frontY
+end
 local sprite = {
   def = { frames = 6, walker = true },
   image = {},
@@ -270,5 +279,58 @@ OverworldState.update(state, 0)
 draws = {}
 player.sprite:draw(0, 0, 0, 0, "right", 0, false)
 assert(draws[#draws].sx ~= -1, "spin sprite was mirrored for right-facing Link")
+
+local environmentMap = {
+  id = "TEST_HOUSE",
+  def = { id = "TEST_HOUSE", tileset = "HOUSE", width = 4, height = 4,
+    objects = {} },
+  widthCells = 8,
+  heightCells = 8,
+}
+function environmentMap:isWalkableCell(x, y)
+  return x > 0 and y > 0 and x < 7 and y < 7
+end
+function environmentMap:isCounterCell() return false end
+function environmentMap:warpAtCell() return nil end
+function environmentMap:signAtCell() return nil end
+function environmentMap:isGrassCell(x, y) return x == 2 and y == 2 end
+
+state.map = environmentMap
+state.npcs = {}
+state.entities = { player }
+player.tlozAction = nil
+player.cellX, player.cellY = 1, 1
+player.px, player.py = 16, 16
+Game.overworld = state
+listeners["map.entered"]({ map = environmentMap })
+local pot
+for _, entity in ipairs(state.entities) do
+  if entity.tlozEnvironmentType == "pot" then pot = entity end
+end
+assert(pot, "house map did not receive a pot")
+frontX, frontY = pot.cellX, pot.cellY
+input.pressed.b = true
+OverworldState.handleInput(state)
+for _ = 1, 12 do OverworldState.update(state, 1 / 60) end
+assert(not contains(state.entities, pot), "sword did not break the pot")
+local rupee
+for _, entity in ipairs(state.entities) do
+  if entity.tlozEnvironmentType == "rupee" then rupee = entity end
+end
+if rupee then
+  player.cellX, player.cellY = rupee.cellX, rupee.cellY
+  player.px, player.py = rupee.px, rupee.py
+  OverworldState.update(state, 1 / 60)
+  assert(game.save.money > 10, "rupee did not update the wallet")
+end
+
+frontX, frontY = 2, 2
+player.cellX, player.cellY = 1, 2
+player.px, player.py = 16, 32
+player.tlozAction = nil
+input.pressed.b = true
+OverworldState.handleInput(state)
+for _ = 1, 12 do OverworldState.update(state, 1 / 60) end
+assert(state.tlozEnvironmentMapState.cutGrass["2:2"])
 
 print("tloz-recomp-mania main integration tests passed")
