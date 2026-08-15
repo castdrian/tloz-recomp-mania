@@ -337,6 +337,7 @@ local cityPlayer = {
   animClock = 0,
   stepFlip = false,
 }
+function cityPlayer:facingCell() return 1, 0 end
 local ambient = {
   id = "ambient-1",
   ambientSpecies = "EEVEE",
@@ -369,6 +370,45 @@ assert(cries[cityCryStart + 1] == "EEVEE")
 assert(#npcSounds == cityVillagerStart)
 assert(ambient.tlozDefeated)
 assert(ambientRemoved)
+
+local grassWild = {
+  id = "wild-grass-1",
+  spawnId = "wild-grass-1",
+  species = "PIDGEY",
+  state = "available",
+  overworldWildSpawn = true,
+  cellX = 2,
+  cellY = 0,
+  px = 32,
+  py = 0,
+  draw = function() end,
+}
+local grassMap = {
+  id = "ROUTE_GRASS",
+  def = { id = "ROUTE_GRASS", tileset = "OVERWORLD", width = 4, height = 4,
+    objects = {} },
+  widthCells = 8,
+  heightCells = 8,
+}
+function grassMap:isGrassCell(x, y) return x == 2 and y == 0 end
+local grassState = {
+  player = cityPlayer,
+  map = grassMap,
+  npcs = {},
+  entities = { cityPlayer, grassWild },
+  camera = { x = 0, y = 0 },
+}
+cityPlayer.tlozAction = nil
+cityPlayer.cellX, cityPlayer.cellY = 0, 0
+cityPlayer.px, cityPlayer.py = 0, 0
+cityPlayer.facing = "right"
+local grassCryStart = #cries
+input.pressed.b = true
+OverworldState.handleInput(grassState)
+for _ = 1, 12 do OverworldState.update(grassState, 0) end
+assert(#cries - grassCryStart == 1)
+assert(cries[grassCryStart + 1] == "PIDGEY")
+assert(not grassState.tlozEnvironmentMapState.cutGrass["2:0"])
 
 local respawnPlayer = {
   cellX = 0,

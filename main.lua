@@ -438,16 +438,6 @@ return function(mod)
 
   local function strike(state, action)
     local roundabout = action.kind == "sword_spin"
-    if state.player.facingCell
-       and environment:hit(state, {
-         breakPots = true,
-         cutGrass = true,
-         cells = roundabout and Hitbox.roundaboutCells(state.player)
-           or Hitbox.cells(state.player),
-       }) then
-      action.hit = true
-      return
-    end
     local target = targetAt(state, roundabout)
     if target then
       local entity = target.entity
@@ -482,6 +472,16 @@ return function(mod)
           purgeNpc(state, entity)
         end
       end
+      action.hit = true
+      return
+    end
+    if state.player.facingCell
+       and environment:hit(state, {
+         breakPots = true,
+         cutGrass = true,
+         cells = roundabout and Hitbox.roundaboutCells(state.player)
+           or Hitbox.cells(state.player),
+       }) then
       action.hit = true
       return
     end
