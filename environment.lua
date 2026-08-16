@@ -649,6 +649,45 @@ function Environment:potAt(x, y)
   return self.activePots[mapCellKey(x, y)]
 end
 
+function Environment:potAtFacing(state)
+  local player = state and state.player
+  if not player or type(player.facingCell) ~= "function" then return nil end
+  local x, y = player:facingCell()
+  local found = self:potAt(x, y)
+  if not found or not found.data or found.data.destroyed then return nil end
+  return found
+end
+
+function Environment:isHoldingPot(state)
+  return state and state.player and state.player.tlozHoldingPot == true
+end
+
+function Environment:pickUpPot(state)
+  if self:isHoldingPot(state) then return false end
+  local found = self:potAtFacing(state)
+  if not found then return false end
+  found.data.destroyed = true
+  removeEntity(state, found.entity)
+  local key = mapCellKey(found.data.x, found.data.y)
+  self.activePots[key] = nil
+  state.player.tlozHoldingPot = true
+  self:saveState()
+  return true
+end
+
+function Environment:throwPot(state)
+  if not self:isHoldingPot(state) then return false end
+  local player = state and state.player
+  if not player or type(player.facingCell) ~= "function" then return false end
+  local x, y = player:facingCell()
+  player.tlozHoldingPot = false
+  self:spawnEffect(state, "pot", x, y)
+  self:play("TLOZ_POT_BREAK")
+  self:drop(state, "pot", x, y)
+  self:saveState()
+  return true
+end
+
 function Environment:destroyPot(state, x, y)
   self:ensureMap(state)
   local found = self:potAt(x, y)

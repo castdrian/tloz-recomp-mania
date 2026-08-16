@@ -10,6 +10,8 @@ local identity = {
 local modelSource = [[
 local identity = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}
 local mesh = {vertices={{0,0,0,0,0,1}},indices={1},weights={1,1,0,0,0,0,0,0}}
+local firstFrame = {identity,positions={{2,3,4}}}
+local secondFrame = {identity,positions={{5,6,7}}}
 return {
   version=1, scale=1, bones={"root"},
   body=mesh,
@@ -18,9 +20,17 @@ return {
     shield={bone=1,mesh=mesh},
   },
   actions={
-    idle={frames={{identity}}},
-    walk={frames={{identity}}},
-    sword={frames={{identity}}},
+    idle={frames={firstFrame}},
+    walk={frames={firstFrame}},
+    sword={ticks=12,frames={firstFrame,secondFrame}},
+    sword_spin={ticks=16,frames={firstFrame,secondFrame}},
+    sword_charge={ticks=12,frames={firstFrame,secondFrame}},
+    shield={frames={firstFrame,secondFrame}},
+    tool={ticks=6,frames={firstFrame,secondFrame}},
+    tool_bow={ticks=6,frames={firstFrame,secondFrame}},
+    tool_hammer={ticks=6,frames={firstFrame,secondFrame}},
+    pickup={ticks=7,frames={firstFrame,secondFrame}},
+    throw={ticks=7,frames={firstFrame,secondFrame}},
   },
 }
 ]]
@@ -103,6 +113,42 @@ local context = {
 assert(registered.callback(context))
 assert(#meshes == 3)
 assert(#draws == 3)
+assert(meshes[1].vertices[1][1] == 2)
+assert(meshes[1].vertices[1][2] == 3)
+assert(meshes[1].vertices[1][3] == 4)
+local function mappedAction(kind, combo)
+  local mappedSprite = { tlozVoxelPose = {
+    kind = kind, combo = combo, frame = 1, maxFrame = 2, timer = 0,
+  } }
+  local name = player:pose({
+    sprite = mappedSprite, phase = 0, facing = "down",
+  })
+  return name
+end
+assert(mappedAction("sword_spin") == "sword_spin")
+assert(mappedAction("sword_charge") == "sword_charge")
+assert(mappedAction("shield") == "shield")
+assert(mappedAction("tool", "bow") == "tool_bow")
+assert(mappedAction("tool", "hammer") == "tool_hammer")
+assert(mappedAction("pickup") == "pickup")
+assert(mappedAction("throw") == "throw")
+local timedSprite = { tlozVoxelPose = {
+  kind = "sword", frame = 1, maxFrame = 3, timer = 11,
+} }
+local _, _, timedKey = player:pose({
+  sprite = timedSprite, phase = 0, facing = "down",
+})
+assert(timedKey == "sword:2")
+local translated = {
+  1, 0, 0, 2,
+  0, 1, 0, 3,
+  0, 0, 1, 4,
+  0, 0, 0, 1,
+}
+local skinned = player:buildBody({ translated })
+assert(skinned[1][1] == 2)
+assert(skinned[1][2] == 3)
+assert(skinned[1][3] == 4)
 assert(draws[1].texture.path == "assets/models/chibi_link_base_color.png")
 assert(draws[2].texture.path == "assets/models/chibi_link_props_base_color.png")
 assert(draws[1].model.left.x == 24)

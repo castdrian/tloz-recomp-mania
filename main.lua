@@ -284,6 +284,9 @@ return function(mod)
       name = string.format("sword_spin_%d.png", math.min(frame, 8))
       local anchorX, anchorY = actionAnchor(swordSpinAnchors, frame)
       return looseSprite(name, "tloz-action-" .. name, anchorX, anchorY, false)
+    elseif kind == "pickup" or kind == "throw" then
+      return sprite("mc/move_down_stand.png", 1, false,
+        "tloz-action-" .. kind)
     elseif kind == "tool" and combo ~= "shield" then
       name = string.format("use_item_%d.png", math.min(frame, 2))
     else
@@ -536,6 +539,20 @@ return function(mod)
     play("TLOZ_SHIELD")
   end
 
+  local function startPotAction(state)
+    if environment:isHoldingPot(state) then
+      state.player.tlozAction = Action.new("throw", "pot", nil, 2, 2)
+      play("TLOZ_LINK_THROW")
+      return true
+    end
+    if environment:potAtFacing(state) then
+      state.player.tlozAction = Action.new("pickup", "pot", nil, 2, 2)
+      play("TLOZ_LINK_PICKUP")
+      return true
+    end
+    return false
+  end
+
   local function startEquipment(state, equipment)
     if equipment.id == "shield" then
       startShield(state)
@@ -590,7 +607,13 @@ return function(mod)
       play("TLOZ_BOMB_BLOW")
     end
     if action.frame == action.hitFrame and not action.hit then
-      if action.kind == "tool" then
+      if action.kind == "pickup" then
+        environment:pickUpPot(state)
+        action.hit = true
+      elseif action.kind == "throw" then
+        environment:throwPot(state)
+        action.hit = true
+      elseif action.kind == "tool" then
         if action.combo ~= "bomb" then play(action.hitAudio) end
         environment:hit(state, {
           breakPots = action.combo == "hammer" or action.combo == "bomb",
@@ -664,6 +687,7 @@ return function(mod)
         combo = action.combo,
         frame = action.frame,
         maxFrame = action.maxFrame,
+        timer = action.timer,
         clock = voxelPlayer.clock,
         stepFlip = player.stepFlip,
       })
@@ -711,6 +735,9 @@ return function(mod)
             elseif input:wasPressed("b") and not player.onBike
                and not player.surfing and not player.fishing then
               startSword(state)
+            elseif input:isDown("a") and not player.onBike
+               and not player.surfing and not player.fishing
+               and startPotAction(state) then
             elseif input:isDown("a") and not hasInteractionTarget(state)
                and not player.onBike and not player.surfing
                and not player.fishing then
@@ -759,6 +786,10 @@ return function(mod)
           if input:wasPressed("b") and not player.onBike and not player.surfing
              and not player.fishing then
             startSword(state)
+            return
+          end
+          if input:isDown("a") and not player.onBike and not player.surfing
+             and not player.fishing and startPotAction(state) then
             return
           end
           if input:isDown("a") and environment:itemAtFacing(state)

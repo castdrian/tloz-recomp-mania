@@ -54,6 +54,12 @@ local function actionFrame(pose, action, count)
   if count <= 1 then return 1 end
   local source = tonumber(pose.frame) or 1
   local maximum = tonumber(pose.maxFrame) or count
+  local timer = tonumber(pose.timer)
+  local duration = tonumber(action.ticks)
+  if timer and duration and duration > 1 then
+    source = timer + 1
+    maximum = duration
+  end
   if maximum <= 1 then return 1 end
   local progress = math.max(0, math.min(1, (source - 1) / (maximum - 1)))
   return 1 + math.floor(progress * (count - 1) + 0.5)
@@ -116,9 +122,11 @@ function VoxelPlayer:loadModel()
   self.model = model
   self.linkTexture = self:loadImage(
     "assets/models/chibi_link_base_color.png")
-  self.propsTexture = self:loadImage(
-    "assets/models/chibi_link_props_base_color.png")
-  if not self.linkTexture or not self.propsTexture then
+  local props = model.props or {}
+  local needsProps = props.sword or props.shield
+  self.propsTexture = needsProps and self:loadImage(
+    "assets/models/chibi_link_props_base_color.png") or nil
+  if not self.linkTexture or (needsProps and not self.propsTexture) then
     self:warn("model textures are missing")
     self.model = nil
     return false
@@ -168,9 +176,24 @@ function VoxelPlayer:pose(context)
   local pose = sprite and sprite.tlozVoxelPose or {}
   local kind = pose.kind or "idle"
   local actionName = "idle"
-  if kind == "sword" or kind == "sword_spin"
-     or kind == "sword_charge" then
+  if kind == "sword" then
     actionName = "sword"
+  elseif kind == "sword_spin" then
+    actionName = "sword_spin"
+  elseif kind == "sword_charge" then
+    actionName = "sword_charge"
+  elseif kind == "shield" then
+    actionName = "shield"
+  elseif kind == "tool" then
+    local toolActions = {
+      bow = "tool_bow",
+      hammer = "tool_hammer",
+    }
+    actionName = toolActions[pose.combo] or "tool"
+  elseif kind == "pickup" then
+    actionName = "pickup"
+  elseif kind == "throw" then
+    actionName = "throw"
   elseif pose.moving or pose.walkPose == "walk"
      or pose.walkPose == "walk_alt" or context.phase == 1 then
     actionName = "walk"
@@ -181,11 +204,17 @@ function VoxelPlayer:pose(context)
   if actionName == "sword" then
     frame = actionFrame(pose, action, #action.frames)
   elseif actionName == "walk" then
+    local step = tonumber(action.step) or 1
+    local offset = pose.stepFlip and math.floor(#action.frames / 2) or 0
     frame = 1 + (math.floor((tonumber(pose.movementClock)
-      or tonumber(pose.clock) or 0) / 4)
-      + (pose.stepFlip and 2 or 0)) % #action.frames
+      or tonumber(pose.clock) or 0) / step)
+      + offset) % #action.frames
+  elseif action.loop then
+    local step = tonumber(action.step) or 1
+    frame = 1 + math.floor((tonumber(pose.clock) or 0) / step)
+      % #action.frames
   else
-    frame = 1 + math.floor((tonumber(pose.clock) or 0) / 12) % #action.frames
+    frame = actionFrame(pose, action, #action.frames)
   end
   local key = actionName .. ":" .. tostring(frame)
   return actionName, action.frames[frame], key,
@@ -195,6 +224,16 @@ end
 function VoxelPlayer:buildBody(actionFrameData)
   local source = self.model.body
   local values = {}
+  local positions = actionFrameData and actionFrameData.positions
+  if positions then
+    local scale = self.model.scale or 1
+    for index, vertex in ipairs(source.vertices or {}) do
+      local position = positions[index] or vertex
+      values[index] = { position[1] * scale, position[2] * scale,
+                        position[3] * scale, vertex[4], vertex[5], vertex[6] }
+    end
+    return values, source.indices
+  end
   local weights = source.weights or {}
   local scale = self.model.scale or 1
   for index, vertex in ipairs(source.vertices or {}) do
@@ -234,14 +273,23 @@ function VoxelPlayer:meshesFor(context, actionFrameData, key)
   if cached then return cached end
   if type(context.newMesh) ~= "function" then return nil end
   local bodyVertices, bodyIndices = self:buildBody(actionFrameData)
-  local swordVertices, swordIndices = self:buildProp(
-    self.model.props.sword, actionFrameData)
-  local shieldVertices, shieldIndices = self:buildProp(
-    self.model.props.shield, actionFrameData)
   local body = context.newMesh(bodyVertices, bodyIndices)
-  local sword = context.newMesh(swordVertices, swordIndices)
-  local shield = context.newMesh(shieldVertices, shieldIndices)
-  if not body or not sword or not shield then return nil end
+  if not body then return nil end
+  local props = self.model.props or {}
+  local sword
+  if props.sword then
+    local swordVertices, swordIndices = self:buildProp(
+      props.sword, actionFrameData)
+    sword = context.newMesh(swordVertices, swordIndices)
+    if not sword then return nil end
+  end
+  local shield
+  if props.shield then
+    local shieldVertices, shieldIndices = self:buildProp(
+      props.shield, actionFrameData)
+    shield = context.newMesh(shieldVertices, shieldIndices)
+    if not shield then return nil end
+  end
   cached = { body = body, sword = sword, shield = shield }
   self.meshes[cacheKey] = cached
   self.shadowMeshes[body] = true
@@ -249,9 +297,12 @@ function VoxelPlayer:meshesFor(context, actionFrameData, key)
 end
 
 function VoxelPlayer:modelMatrix(context, yaw)
+  local verticalOffset = tonumber(self.model.verticalOffset) or 0
+  local scale = tonumber(self.model.scale) or 1
   local translate = context.mat4.translate(
     (context.px or 0) + 8,
-    (context.ground or 0) + (context.lift or 0),
+    (context.ground or 0) + (context.lift or 0)
+      + verticalOffset * scale,
     (context.py or 0) + 8)
   return context.mat4.mul(translate, context.mat4.rotateY(yaw))
 end

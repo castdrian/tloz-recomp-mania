@@ -190,6 +190,25 @@ environment:update(state, 1 / 60)
 assert(game.save.money == 20)
 assert(sounds[3] == "TLOZ_RUPEE_COLLECT")
 
+local carriedPot
+for _, entity in ipairs(state.entities) do
+  if entity.tlozEnvironmentType == "pot" then carriedPot = entity break end
+end
+assert(carriedPot)
+player.facingCell = function() return carriedPot.cellX, carriedPot.cellY end
+assert(environment:potAtFacing(state) == environment:potAt(
+  carriedPot.cellX, carriedPot.cellY))
+assert(environment:pickUpPot(state))
+assert(environment:isHoldingPot(state))
+local carriedPotPresent = false
+for _, entity in ipairs(state.entities) do
+  if entity == carriedPot then carriedPotPresent = true end
+end
+assert(not carriedPotPresent)
+player.facingCell = function() return 3, 1 end
+assert(environment:throwPot(state))
+assert(not environment:isHoldingPot(state))
+
 local itemInventory = {}
 local itemSounds = {}
 local itemGame = {
@@ -319,7 +338,11 @@ assert(not occupiedEnvironment:cutGrass(occupiedState, 2, 2))
 assert(environment:cutGrass(state, 2, 2))
 assert(not environment:cutGrass(state, 2, 2))
 assert(persisted.environment.maps.TEST_HOUSE.cutGrass["2:2"])
-assert(sounds[4] == "TLOZ_GRASS_CUT")
+local grassSound
+for _, name in ipairs(sounds) do
+  if name == "TLOZ_GRASS_CUT" then grassSound = name end
+end
+assert(grassSound == "TLOZ_GRASS_CUT")
 
 local originalLove = _G.love
 local rupeeDraws = {}
