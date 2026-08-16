@@ -216,6 +216,14 @@ local state = {
   camera = { x = 0, y = 0 },
 }
 
+OverworldState.update(state, 0)
+assert(player.sprite and player.sprite.def)
+assert(player.sprite.def.image)
+assert(player.sprite.def.frames == 1)
+assert(player.sprite.def.trueColor)
+assert(type(player.sprite.resolveImage) == "function")
+assert(player.sprite:resolveImage())
+
 local function hitOnce(ticks)
   input.pressed.b = true
   OverworldState.handleInput(state)

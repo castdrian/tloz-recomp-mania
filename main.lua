@@ -34,8 +34,7 @@ return function(mod)
   local WarpEffects = loadModule(mod, "warp_effects.lua")
   local Environment = loadModule(mod, "environment.lua")
   local Wilds = loadModule(mod, "wilds_compat.lua")
-  local VoxelPlayerModule = loadModule(mod, "voxel_player.lua")
-  local voxelPlayer = VoxelPlayerModule.new(mod)
+  local VoxelCompat = loadModule(mod, "voxel_compat.lua")
   local assetPath = function(name)
     return mod.assets:path("assets/" .. name)
   end
@@ -170,8 +169,10 @@ return function(mod)
       flipRight and "flip" or "fixed", assetRoot or "mc/" }, "|")
     if looseSpriteCache[key] then return looseSpriteCache[key] end
     local root = assetRoot == nil and "mc/" or assetRoot
-    local image = mod.assets:image("assets/sprites/" .. root .. name)
+    local imagePath = "assets/sprites/" .. root .. name
+    local image = mod.assets:image(imagePath)
     local result = { image = image, width = image:getWidth(), height = image:getHeight() }
+    VoxelCompat.prepare(result, assetPath("sprites/mc/move_down_stand.png"))
     result.anchorX = anchorX or 0
     result.anchorY = anchorY or 4
     function result:setObjPalette() end
@@ -202,14 +203,15 @@ return function(mod)
   end
 
   local function movementSprite()
-    return {
+    local result = {
+      image = mod.assets:image("assets/sprites/mc/move_down_stand.png"),
       movement = Movement.new(),
       setObjPalette = function() end,
       draw = function(self, px, py, camX, camY, facing)
         local direction = facing
         local pose = Movement.pose(self.movement)
-        local image = mod.assets:image("assets/sprites/mc/move_"
-          .. direction .. "_" .. pose .. ".png")
+        self:setPose(direction, pose)
+        local image = self.image
         local x = math.floor(px - camX)
         local y = math.floor(py - camY) - 4
         love.graphics.draw(image, x, y)
@@ -226,6 +228,15 @@ return function(mod)
         PaletteFX.markTrueColor(x, y, width, image:getHeight())
       end,
     }
+    VoxelCompat.prepare(result, assetPath("sprites/mc/move_down_stand.png"))
+    function result:setPose(direction, pose)
+      self.currentFacing = direction or "down"
+      self.currentPose = pose or "stand"
+      self.image = mod.assets:image("assets/sprites/mc/move_"
+        .. self.currentFacing .. "_" .. self.currentPose .. ".png")
+    end
+    result:setPose("down", "stand")
+    return result
   end
 
   local swordSwingFrames = {
@@ -662,14 +673,7 @@ return function(mod)
       or (player.bumpFrames and player.bumpFrames > 0)
     Movement.sync(link.movement, active, player.animClock or 0,
       player.stepFlip)
-    VoxelPlayerModule.mark(voxelPlayer, link, {
-      kind = "movement",
-      moving = active,
-      walkPose = Movement.pose(link.movement),
-      movementClock = player.animClock or 0,
-      clock = voxelPlayer.clock,
-      stepFlip = player.stepFlip,
-    })
+    link:setPose(player.facing, Movement.pose(link.movement))
     player.sprite = link
     player.surfSprite = link
     player.surfPikachuSprite = link
@@ -682,15 +686,6 @@ return function(mod)
     if action then
       local sprite = actionSprite(action.kind, action.combo,
         player.facing, action.frame)
-      VoxelPlayerModule.mark(voxelPlayer, sprite, {
-        kind = action.kind,
-        combo = action.combo,
-        frame = action.frame,
-        maxFrame = action.maxFrame,
-        timer = action.timer,
-        clock = voxelPlayer.clock,
-        stepFlip = player.stepFlip,
-      })
       player.sprite = sprite
       return
     end
@@ -750,7 +745,6 @@ return function(mod)
         local result = update(state, dt)
         SeamTransition.update(state)
         environment:update(state, dt)
-        voxelPlayer:step()
         applyPlayerVisual(state.player)
         return result
       end
@@ -865,7 +859,6 @@ return function(mod)
       playData = payload.game.data
       environment.game = payload.game
       environment:adoptSave()
-      voxelPlayer:install()
       install(payload.game)
     end
   end)
