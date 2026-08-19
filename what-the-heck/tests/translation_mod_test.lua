@@ -9,10 +9,10 @@ package.loaded["src.core.GameVersion"] = {
 local root = "what-the-heck/"
 local applied = {}
 local expected = {
-  red = { text = 2582, strings = 949, pokemon = 151, moves = 165, items = 152, trainers = 47 },
-  blue = { text = 2582, strings = 949, pokemon = 151, moves = 165, items = 152, trainers = 47 },
-  yellow = { text = 2706, strings = 949, pokemon = 151, moves = 165, items = 152, trainers = 47 },
-  gold = { text = 3042, strings = 949, pokemon = 251, moves = 251, items = 247, trainers = 562 },
+  red = { text = 2582, strings = 960, pokemon = 151, moves = 165, items = 152, trainers = 47 },
+  blue = { text = 2582, strings = 960, pokemon = 151, moves = 165, items = 152, trainers = 47 },
+  yellow = { text = 2706, strings = 960, pokemon = 151, moves = 165, items = 152, trainers = 47 },
+  gold = { text = 3042, strings = 960, pokemon = 251, moves = 251, items = 247, trainers = 562 },
 }
 
 local function size(values)

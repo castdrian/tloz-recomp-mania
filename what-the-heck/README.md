@@ -4,6 +4,8 @@ what the heck is this?
 
 This content mod replaces every text row exposed by the imported Pokémon Red, Blue, Yellow, and Gold extraction with English text sent through a forty-language translation relay and translated back to English. That includes dialogue, signs, battle text, and menu text present in the extracted text tables, plus the engine-authored strings used by battle messages, item results, menus, and link play.
 
+Title, start, party, and option menu rows are passed through the same catalog on Red, Blue, Yellow, and Gold, including menu labels that the Gold UI normally renders as raw literals.
+
 The same relay is applied to the extracted Pokémon, move, item, and trainer names. The runtime control codes, format directives, placeholders, record IDs, and original spacing around those controls are preserved. The supplied Gen 1 and Gold data exports do not contain an ability-name registry; Gen 1 has no ability system, so there is no ability table available to patch.
 
 The catalogs are generated before packaging, so the game does not need an internet connection. Missing or unsafe entries remain English and the mod does not include ROMs or save files.

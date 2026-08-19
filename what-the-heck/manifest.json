@@ -2,6 +2,7 @@
   "id": "what-the-heck",
   "name": "what-the-heck",
   "version": "0.1.0",
+  "github": "castdrian/what-the-heck",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",

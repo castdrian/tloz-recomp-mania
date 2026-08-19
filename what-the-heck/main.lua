@@ -65,10 +65,38 @@ local function applyNamedCatalog(mod, version, name)
   return count
 end
 
+local function translateMenuRows(rows, catalog)
+  if type(rows) ~= "table" then return rows end
+  for _, row in ipairs(rows) do
+    if type(row) == "table" and type(row.label) == "string" then
+      row.label = catalog[row.label] or row.label
+    end
+  end
+  return rows
+end
+
+local function installMenuHooks(mod, catalog)
+  if not mod.hooks or type(mod.hooks.wrap) ~= "function" then return end
+  mod.hooks:wrap("ui.title_menu.items", function(next, game, rows)
+    return translateMenuRows(next(game, rows), catalog)
+  end)
+  mod.hooks:wrap("ui.start_menu.items", function(next, game, rows)
+    return translateMenuRows(next(game, rows), catalog)
+  end)
+  mod.hooks:wrap("ui.party.submenu", function(next, game, rows, mon, context)
+    return translateMenuRows(next(game, rows, mon, context), catalog)
+  end)
+  mod.hooks:wrap("ui.options.rows", function(next, game, rows)
+    return translateMenuRows(next(game, rows), catalog)
+  end)
+end
+
 return function(mod)
   local version = activeVersion()
   local textCount = applyCatalog(mod.content.text, readCatalog(mod, version))
-  local stringCount = applyCatalog(mod.content.strings, readCatalog(mod, "strings"))
+  local stringCatalog = readCatalog(mod, "strings")
+  local stringCount = applyCatalog(mod.content.strings, stringCatalog)
+  installMenuHooks(mod, stringCatalog)
   local namedCounts = {}
   for _, name in ipairs(NAMED_CATALOGS) do
     namedCounts[name] = applyNamedCatalog(mod, version, name)
