@@ -30,7 +30,12 @@ NAMED_CATALOGS = ("pokemon", "moves", "items", "trainers")
 CONTROL_CHARACTERS = ("\n", "\v", "\f", "\r", "\t")
 CONTROL_PATTERN = re.compile("[" + "".join(re.escape(value) for value in CONTROL_CHARACTERS) + "]")
 RUNTIME_TOKENS = re.compile(r"\{[^{}\n]+\}|#MON|POKéMON|POKEMON|¥")
-FIXED_PATTERN = re.compile(r"[\n\v\f\r\t]|\{[^{}\n]+\}|#MON|POKéMON|POKEMON|¥")
+FORMAT_TOKENS = re.compile(r"%(?:%|[-+ #0]*\d*(?:\.\d+)?[A-Za-z])")
+RELAY_I_ARTIFACT = re.compile(r" *I *- *(?=[\n\v\f\r\t]|$|[A-Za-z.!?,{%])")
+FIXED_PATTERN = re.compile(
+    r"[\n\v\f\r\t]|\{[^{}\n]+\}|#MON|POKéMON|POKEMON|¥|"
+    + FORMAT_TOKENS.pattern
+)
 
 
 def decode_lua(value: str) -> str:
@@ -318,8 +323,10 @@ def clean(value: str, original: str) -> str:
 
 def clean_name(value: str, original: str) -> str:
     value = clean(value, original)
-    if "I-" not in original:
-        value = re.sub(r" *I-(?=[ \n\v\f\r\t]|$|[A-Za-z]|[.!?,])", "", value)
+    if not RELAY_I_ARTIFACT.search(original):
+        value = RELAY_I_ARTIFACT.sub("", value)
+    if "/" not in original:
+        value = value.replace("/", "")
     source_suffix = re.search(r"[^\w\s]+$", original.strip())
     suffix = source_suffix.group(0) if source_suffix else ""
     value = value.strip()
@@ -334,7 +341,7 @@ def clean_text(value: str, original: str) -> str:
     value = clean(value, original)
     if "/" not in original:
         value = value.replace("/", "")
-    value = re.sub(r" *I-(?=[ \n\v\f\r\t]|$|[A-Za-z]|[.!?,])", "", value)
+    value = RELAY_I_ARTIFACT.sub("", value)
     return value
 
 
@@ -347,18 +354,20 @@ def validate_catalog(original: dict[str, str], output: dict[str, str], named: bo
         output_value = output[key]
         if original_value and not output_value:
             raise ValueError(f"empty translated value for {key}")
+        if "/" not in original_value and "/" in output_value:
+            raise ValueError(f"relay slash artifact for {key}")
+        if not RELAY_I_ARTIFACT.search(original_value) and RELAY_I_ARTIFACT.search(output_value):
+            raise ValueError(f"relay I artifact for {key}")
         if named:
             continue
         if CONTROL_PATTERN.findall(original_value) != CONTROL_PATTERN.findall(output_value):
             raise ValueError(f"control-code mismatch for {key}")
         if RUNTIME_TOKENS.findall(original_value) != RUNTIME_TOKENS.findall(output_value):
             raise ValueError(f"runtime-token mismatch for {key}")
+        if FORMAT_TOKENS.findall(original_value) != FORMAT_TOKENS.findall(output_value):
+            raise ValueError(f"format-directive mismatch for {key}")
         if restore_boundaries(output_value, original_value) != output_value:
             raise ValueError(f"spacing-boundary mismatch for {key}")
-        if "/" not in original_value and "/" in output_value:
-            raise ValueError(f"relay slash artifact for {key}")
-        if "I-" not in original_value and "I-" in output_value:
-            raise ValueError(f"relay I- artifact for {key}")
 
 
 def write_catalog(destination: Path, output: dict[str, str]) -> None:
@@ -403,6 +412,7 @@ def main() -> int:
     parser.add_argument("--blue", type=Path)
     parser.add_argument("--yellow", type=Path)
     parser.add_argument("--gold", type=Path)
+    parser.add_argument("--strings", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--skip-text", action="store_true")
@@ -421,6 +431,10 @@ def main() -> int:
             (args.output / "blue.lua").write_text((args.output / "red.lua").read_text(encoding="utf-8"), encoding="utf-8")
         for name, source in catalogs[1:]:
             translate_catalog(source, args.output / (name + ".lua"), args.workers)
+    if args.strings:
+        translate_catalog(args.strings, args.output / "strings.lua", args.workers)
+    elif not args.skip_text:
+        parser.error("--strings is required unless --skip-text is used")
     for catalog in NAMED_CATALOGS:
         for version in ("red", "blue", "yellow", "gold"):
             source = getattr(args, f"{version}_{catalog}")
